@@ -1,0 +1,12 @@
+services:
+  - type: static
+    name: fitlife-frontend
+    env: static
+    rootDir: .
+    buildCommand: ""
+    staticPublishPath: .
+    pullRequestPreviewsEnabled: true
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache

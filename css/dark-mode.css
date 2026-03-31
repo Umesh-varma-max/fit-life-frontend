@@ -1,0 +1,111 @@
+/* ──────────────────────────────────────────────────
+   dark-mode.css — [data-theme="dark"] Overrides
+   ────────────────────────────────────────────────── */
+
+/* Most dark mode is handled by CSS variables in main.css.
+   This file is for component-specific dark overrides. */
+
+[data-theme="dark"] body {
+  color-scheme: dark;
+}
+
+/* ─── Form Inputs ─── */
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-textarea,
+[data-theme="dark"] .form-select {
+  background: var(--bg-alt);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+[data-theme="dark"] .form-input::placeholder,
+[data-theme="dark"] .form-textarea::placeholder {
+  color: var(--text-light);
+}
+
+/* ─── Radio Cards ─── */
+[data-theme="dark"] .radio-card-label {
+  background: var(--bg-alt);
+}
+
+/* ─── Sidebar ─── */
+[data-theme="dark"] .sidebar {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+/* ─── Topbar ─── */
+[data-theme="dark"] .topbar {
+  background: rgba(13, 13, 26, 0.85);
+}
+
+/* ─── Chart.js Canvas ─── */
+[data-theme="dark"] .chart-card {
+  background: var(--card);
+}
+
+/* ─── Toast ─── */
+[data-theme="dark"] .toast {
+  background: var(--card);
+  border-color: var(--border);
+}
+
+/* ─── Links ─── */
+[data-theme="dark"] a:hover {
+  color: var(--accent);
+}
+
+/* ─── Scrollbar ─── */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #444466;
+}
+
+/* ─── Selection ─── */
+[data-theme="dark"] ::selection {
+  background: var(--accent);
+  color: #0d0d1a;
+}
+
+/* ─── Range Slider Track ─── */
+[data-theme="dark"] .form-range {
+  background: var(--border);
+}
+
+/* ─── Tab Bar ─── */
+[data-theme="dark"] .tab-bar {
+  background: var(--bg);
+}
+
+[data-theme="dark"] .tab-btn.active {
+  background: var(--card);
+}
+
+/* ─── Progress Bar Background ─── */
+[data-theme="dark"] .progress-wrap {
+  background: var(--border);
+}
+
+/* ─── Toggle Track ─── */
+[data-theme="dark"] .toggle-track {
+  background: var(--border);
+}
+
+/* ─── Card Glass ─── */
+[data-theme="dark"] .card-glass {
+  background: rgba(26, 26, 46, 0.6);
+  border-color: var(--border);
+}
+
+/* ─── Social Button ─── */
+[data-theme="dark"] .social-btn {
+  background: var(--bg-alt);
+}
+
+/* ─── Step Dot ─── */
+[data-theme="dark"] .step-dot {
+  background: var(--bg);
+}

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FitLife Activity Tracker — Log your meals, workouts, water intake, and sleep daily.">
+  <title>Activity Tracker — FitLife</title>
+
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
+</head>
+<body>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="sidebar">
+    <a href="dashboard.html" class="sidebar-logo">
+      <div class="sidebar-logo-icon">🏋️</div>
+      <span class="sidebar-logo-text">FitLife</span>
+    </a>
+    <nav class="sidebar-nav">
+      <span class="nav-section">Main</span>
+      <a href="dashboard.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="nav-label">Dashboard</span></a>
+      <a href="profile.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="nav-label">Health Profile</span></a>
+      <span class="nav-section">Tracking</span>
+      <a href="tracker.html" class="nav-link active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="nav-label">Activity Tracker</span></a>
+      <a href="food-scanner.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span class="nav-label">Food Scanner</span></a>
+      <a href="workout.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767-1.768a2 2 0 1 1-2.829-2.829l-1.767-1.767a2 2 0 1 1-2.829-2.829L4.869 7.697a2 2 0 1 1 2.828-2.829l1.768 1.768a2 2 0 1 1 2.828 2.829l1.768 1.767a2 2 0 1 1 2.828 2.829l1.768 1.767a2 2 0 0 1 0 2.828z"/></svg><span class="nav-label">Workout</span></a>
+      <span class="nav-section">Intelligence</span>
+      <a href="recommendations.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span class="nav-label">Recommendations</span></a>
+      <a href="ai-planner.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4v4"/><path d="M6 10v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10"/><path d="M4 10h16"/><path d="M10 14h4"/><path d="M10 18h4"/></svg><span class="nav-label">AI Planner</span></a>
+      <a href="progress.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span class="nav-label">Progress</span></a>
+      <span class="nav-section">Connect</span>
+      <a href="trainers.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nav-label">Trainers</span></a>
+      <a href="doctors.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nav-label">Doctors</span></a>
+      <a href="reminders.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="nav-label">Reminders</span></a>
+    </nav>
+    <div class="sidebar-user" id="sidebar-user">
+      <div class="avatar" id="user-avatar">U</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="user-name">User</div>
+        <div class="sidebar-user-email" id="user-email">user@email.com</div>
+      </div>
+      <button id="logout-btn" class="sidebar-logout" data-tooltip="Logout" aria-label="Logout">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main-wrap">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button id="hamburger" class="hamburger" aria-label="Toggle menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h2 class="topbar-title">Activity Tracker</h2>
+      </div>
+      <div class="topbar-right">
+        <button id="theme-toggle" class="btn-icon" data-tooltip="Dark Mode" aria-label="Toggle theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <!-- Date Selector -->
+      <div class="card mb-3 animate-fade-in-up">
+        <div class="card-body" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="prev-day" class="btn-icon" aria-label="Previous day">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <input type="date" id="tracker-date" class="form-input" style="max-width: 200px;">
+            <button id="next-day" class="btn-icon" aria-label="Next day">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+          <button id="today-btn" class="btn btn-outline btn-sm">📅 Today</button>
+        </div>
+      </div>
+
+      <!-- Daily Summary -->
+      <div class="card-grid card-grid-4 mb-3">
+        <div class="card stat-card hover-lift animate-fade-in-up delay-1">
+          <div class="stat-label">Calories In</div>
+          <div class="stat-value" id="sum-cal-in">0</div>
+          <div class="stat-sub">kcal consumed</div>
+        </div>
+        <div class="card stat-card hover-lift animate-fade-in-up delay-2">
+          <div class="stat-label">Calories Out</div>
+          <div class="stat-value" id="sum-cal-out">0</div>
+          <div class="stat-sub">kcal burned</div>
+        </div>
+        <div class="card stat-card hover-lift animate-fade-in-up delay-3">
+          <div class="stat-label">Water</div>
+          <div class="stat-value" id="sum-water">0</div>
+          <div class="stat-sub">ml consumed</div>
+        </div>
+        <div class="card stat-card hover-lift animate-fade-in-up delay-4">
+          <div class="stat-label">Sleep</div>
+          <div class="stat-value" id="sum-sleep">0</div>
+          <div class="stat-sub">hours</div>
+        </div>
+      </div>
+
+      <!-- Tab Bar -->
+      <div class="tab-bar mb-3 animate-fade-in-up delay-2">
+        <button class="tab-btn active" data-tab="meals" id="tab-meals">🍽️ Meals</button>
+        <button class="tab-btn" data-tab="workout" id="tab-workout">🏃 Workout</button>
+        <button class="tab-btn" data-tab="water" id="tab-water">💧 Water</button>
+        <button class="tab-btn" data-tab="sleep" id="tab-sleep">😴 Sleep</button>
+      </div>
+
+      <!-- ═══ Tab: Meals ═══ -->
+      <div class="tab-content active" id="content-meals">
+        <div class="card animate-fade-in-up">
+          <div class="card-header">
+            <span class="card-title">Log a Meal</span>
+          </div>
+          <div class="card-body">
+            <div class="grid grid-2 gap-2">
+              <div class="form-group">
+                <label class="form-label" for="meal-desc">Food description</label>
+                <input type="text" id="meal-desc" class="form-input" placeholder="e.g. 2 boiled eggs, 1 banana">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="meal-calories">Calories (kcal)</label>
+                <input type="number" id="meal-calories" class="form-input" placeholder="350" min="0" step="1">
+              </div>
+            </div>
+            <button id="log-meal-btn" class="btn btn-primary btn-sm" style="margin-top: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Meal
+            </button>
+          </div>
+        </div>
+        <div class="card mt-2 animate-fade-in-up delay-1" id="meals-list-card">
+          <div class="card-header">
+            <span class="card-title">Today's Meals</span>
+            <span class="badge badge-accent" id="meals-count">0</span>
+          </div>
+          <div class="card-body" id="meals-list">
+            <div class="empty-state">
+              <div class="empty-state-icon">🍽️</div>
+              <div class="empty-state-title">No meals logged</div>
+              <p class="empty-state-text">Start logging your meals to track calorie intake</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Tab: Workout ═══ -->
+      <div class="tab-content" id="content-workout">
+        <div class="card animate-fade-in-up">
+          <div class="card-header">
+            <span class="card-title">Log a Workout</span>
+          </div>
+          <div class="card-body">
+            <div class="grid grid-3 gap-2">
+              <div class="form-group">
+                <label class="form-label" for="wk-desc">Workout type</label>
+                <select id="wk-desc" class="form-input">
+                  <option value="">Select type</option>
+                  <option value="Running">🏃 Running</option>
+                  <option value="Walking">🚶 Walking</option>
+                  <option value="Cycling">🚴 Cycling</option>
+                  <option value="Swimming">🏊 Swimming</option>
+                  <option value="Yoga">🧘 Yoga</option>
+                  <option value="Weight Training">🏋️ Weight Training</option>
+                  <option value="HIIT">⚡ HIIT</option>
+                  <option value="Cardio">❤️ Cardio</option>
+                  <option value="Other">🔥 Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="wk-duration">Duration (min)</label>
+                <input type="number" id="wk-duration" class="form-input" placeholder="30" min="1">
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="wk-calories">Calories burned</label>
+                <input type="number" id="wk-calories" class="form-input" placeholder="250" min="0">
+              </div>
+            </div>
+            <button id="log-workout-btn" class="btn btn-primary btn-sm" style="margin-top: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Log Workout
+            </button>
+          </div>
+        </div>
+        <div class="card mt-2 animate-fade-in-up delay-1" id="workout-list-card">
+          <div class="card-header">
+            <span class="card-title">Today's Workouts</span>
+            <span class="badge badge-accent" id="workouts-count">0</span>
+          </div>
+          <div class="card-body" id="workout-list">
+            <div class="empty-state">
+              <div class="empty-state-icon">🏃</div>
+              <div class="empty-state-title">No workouts logged</div>
+              <p class="empty-state-text">Log your exercises to track calories burned</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Tab: Water ═══ -->
+      <div class="tab-content" id="content-water">
+        <div class="card animate-fade-in-up">
+          <div class="card-body" style="text-align: center; padding: 40px;">
+            <div style="font-size: 3rem; margin-bottom: 16px;">💧</div>
+            <div style="font-size: 2.8rem; font-weight: 700; color: var(--accent); margin-bottom: 4px;" id="water-display">0 ml</div>
+            <div class="text-muted mb-3" id="water-goal-display">Goal: 3000 ml</div>
+
+            <div class="progress-wrap" style="max-width: 400px; margin: 0 auto 24px; height: 14px;">
+              <div class="progress-bar" id="water-progress" style="width: 0%;"></div>
+            </div>
+
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+              <button class="btn btn-outline btn-sm water-add" data-amount="150">+150 ml</button>
+              <button class="btn btn-outline btn-sm water-add" data-amount="250">+250 ml — Glass</button>
+              <button class="btn btn-outline btn-sm water-add" data-amount="500">+500 ml — Bottle</button>
+              <button class="btn btn-outline btn-sm water-add" data-amount="1000">+1000 ml — Litre</button>
+            </div>
+
+            <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
+              <div class="form-group" style="margin: 0; max-width: 150px;">
+                <input type="number" id="water-custom" class="form-input" placeholder="Custom ml" min="1" style="text-align: center;">
+              </div>
+              <button id="water-custom-btn" class="btn btn-primary btn-sm">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ Tab: Sleep ═══ -->
+      <div class="tab-content" id="content-sleep">
+        <div class="card animate-fade-in-up">
+          <div class="card-body" style="text-align: center; padding: 40px;">
+            <div style="font-size: 3rem; margin-bottom: 16px;">😴</div>
+            <div style="font-size: 2.8rem; font-weight: 700; color: var(--accent); margin-bottom: 4px;" id="sleep-display">0 hrs</div>
+            <div class="text-muted mb-3">Recommended: 7-9 hours</div>
+
+            <div class="range-wrap" style="max-width: 400px; margin: 0 auto 24px;">
+              <div class="range-value" id="sleep-range-display">0</div>
+              <input type="range" id="sleep-range" class="form-range" min="0" max="12" step="0.5" value="0">
+              <div class="range-labels"><span>0h</span><span>6h</span><span>12h</span></div>
+            </div>
+
+            <button id="log-sleep-btn" class="btn btn-primary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              Log Sleep
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/toast.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/dark-mode.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/tracker.js"></script>
+</body>
+</html>

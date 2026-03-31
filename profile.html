@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FitLife Health Profile — Set up your personal health data for AI-powered recommendations.">
+  <title>Health Profile — FitLife</title>
+
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/forms.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/dark-mode.css">
+</head>
+<body>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+  <!-- Sidebar (same as dashboard — will be loaded) -->
+  <aside id="sidebar" class="sidebar">
+    <a href="dashboard.html" class="sidebar-logo">
+      <div class="sidebar-logo-icon">🏋️</div>
+      <span class="sidebar-logo-text">FitLife</span>
+    </a>
+    <nav class="sidebar-nav">
+      <span class="nav-section">Main</span>
+      <a href="dashboard.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="nav-label">Dashboard</span></a>
+      <a href="profile.html" class="nav-link active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="nav-label">Health Profile</span></a>
+      <span class="nav-section">Tracking</span>
+      <a href="tracker.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg><span class="nav-label">Activity Tracker</span></a>
+      <a href="food-scanner.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><span class="nav-label">Food Scanner</span></a>
+      <a href="workout.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.4 14.4 9.6 9.6"/><path d="M18.657 21.485a2 2 0 1 1-2.829-2.828l-1.767-1.768a2 2 0 1 1-2.829-2.829l-1.767-1.767a2 2 0 1 1-2.829-2.829L4.869 7.697a2 2 0 1 1 2.828-2.829l1.768 1.768a2 2 0 1 1 2.828 2.829l1.768 1.767a2 2 0 1 1 2.828 2.829l1.768 1.767a2 2 0 0 1 0 2.828z"/></svg><span class="nav-label">Workout</span></a>
+      <span class="nav-section">Intelligence</span>
+      <a href="recommendations.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span class="nav-label">Recommendations</span></a>
+      <a href="ai-planner.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M16 4v4"/><path d="M6 10v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10"/><path d="M4 10h16"/><path d="M10 14h4"/><path d="M10 18h4"/></svg><span class="nav-label">AI Planner</span></a>
+      <a href="progress.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg><span class="nav-label">Progress</span></a>
+      <span class="nav-section">Connect</span>
+      <a href="trainers.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nav-label">Trainers</span></a>
+      <a href="doctors.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="nav-label">Doctors</span></a>
+      <a href="reminders.html" class="nav-link"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="nav-label">Reminders</span></a>
+    </nav>
+    <div class="sidebar-user" id="sidebar-user">
+      <div class="avatar" id="user-avatar">U</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="user-name">User</div>
+        <div class="sidebar-user-email" id="user-email">user@email.com</div>
+      </div>
+      <button id="logout-btn" class="sidebar-logout" data-tooltip="Logout" aria-label="Logout">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-wrap">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button id="hamburger" class="hamburger" aria-label="Toggle menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h2 class="topbar-title">Health Profile</h2>
+      </div>
+      <div class="topbar-right">
+        <button id="theme-toggle" class="btn-icon" data-tooltip="Dark Mode" aria-label="Toggle theme">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Health Profile</h1>
+          <p class="page-subtitle">Complete your profile for personalized AI recommendations</p>
+        </div>
+      </div>
+
+      <!-- BMI Preview Card -->
+      <div class="card card-glass mb-3 animate-fade-in-up" id="bmi-preview" style="display: none;">
+        <div class="card-body" style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; font-weight: 700; color: var(--accent);" id="live-bmi">--</div>
+            <div class="text-muted" style="font-size: 0.85rem;">BMI Score</div>
+          </div>
+          <div style="flex: 1; min-width: 200px;">
+            <div class="flex items-center gap-2 mb-1">
+              <span id="live-bmi-icon" style="font-size: 1.5rem;">📊</span>
+              <span id="live-bmi-label" class="badge badge-info">--</span>
+            </div>
+            <p class="text-muted" style="font-size: 0.85rem;" id="live-bmi-msg">Enter your height and weight to see your BMI</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step Form -->
+      <div class="card animate-fade-in-up delay-2">
+        <div class="card-body" style="padding: 32px;">
+          <!-- Step Indicator -->
+          <div class="step-indicator">
+            <div class="step-dot active" id="step-dot-1">1</div>
+            <div class="step-line" id="step-line-1"></div>
+            <div class="step-dot" id="step-dot-2">2</div>
+            <div class="step-line" id="step-line-2"></div>
+            <div class="step-dot" id="step-dot-3">3</div>
+          </div>
+
+          <form id="profile-form" novalidate>
+            <!-- Step 1: Personal Info -->
+            <div class="step-content active" id="step-1">
+              <h3 class="mb-2">Personal Information</h3>
+              <p class="text-muted mb-3" style="font-size: 0.9rem;">Basic details for your health assessment</p>
+
+              <div class="form-group">
+                <label class="form-label" for="age">Age <span class="required">*</span></label>
+                <input type="number" id="age" class="form-input" placeholder="25" min="10" max="120" required>
+                <span id="age-error" class="form-error"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Gender <span class="required">*</span></label>
+                <div class="radio-cards radio-cards-3" id="gender-cards">
+                  <div class="radio-card">
+                    <input type="radio" name="gender" id="gender-male" value="male">
+                    <label class="radio-card-label" for="gender-male">
+                      <span class="radio-card-icon">👨</span>
+                      <span class="radio-card-text">Male</span>
+                    </label>
+                  </div>
+                  <div class="radio-card">
+                    <input type="radio" name="gender" id="gender-female" value="female">
+                    <label class="radio-card-label" for="gender-female">
+                      <span class="radio-card-icon">👩</span>
+                      <span class="radio-card-text">Female</span>
+                    </label>
+                  </div>
+                  <div class="radio-card">
+                    <input type="radio" name="gender" id="gender-other" value="other">
+                    <label class="radio-card-label" for="gender-other">
+                      <span class="radio-card-icon">🧑</span>
+                      <span class="radio-card-text">Other</span>
+                    </label>
+                  </div>
+                </div>
+                <span id="gender-error" class="form-error"></span>
+              </div>
+            </div>
+
+            <!-- Step 2: Body & Lifestyle -->
+            <div class="step-content" id="step-2">
+              <h3 class="mb-2">Body & Lifestyle</h3>
+              <p class="text-muted mb-3" style="font-size: 0.9rem;">Physical stats and daily habits</p>
+
+              <div class="grid grid-2 gap-2">
+                <div class="form-group">
+                  <label class="form-label" for="height">Height (cm) <span class="required">*</span></label>
+                  <input type="number" id="height" class="form-input" placeholder="175" min="50" max="280" step="0.1" required>
+                  <span id="height-error" class="form-error"></span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="weight">Weight (kg) <span class="required">*</span></label>
+                  <input type="number" id="weight" class="form-input" placeholder="70" min="10" max="500" step="0.1" required>
+                  <span id="weight-error" class="form-error"></span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Activity Level <span class="required">*</span></label>
+                <div class="radio-cards radio-cards-4" id="activity-cards">
+                  <div class="radio-card">
+                    <input type="radio" name="activity_level" id="act-sedentary" value="sedentary">
+                    <label class="radio-card-label" for="act-sedentary">
+                      <span class="radio-card-icon">🛋️</span>
+                      <span class="radio-card-text">Sedentary</span>
+                      <span class="radio-card-sub">Little/no exercise</span>
+                    </label>
+                  </div>
+                  <div class="radio-card">
+                    <input type="radio" name="activity_level" id="act-light" value="light">
+                    <label class="radio-card-label" for="act-light">
+                      <span class="radio-card-icon">🚶</span>
+                      <span class="radio-card-text">Light</span>
+                      <span class="radio-card-sub">1-3 days/week</span>
+                    </label>
+                  </div>
+                  <div class="radio-card">
+                    <input type="radio" name="activity_level" id="act-moderate" value="moderate">
+                    <label class="radio-card-label" for="act-moderate">
+                      <span class="radio-card-icon">🏃</span>
+                      <span class="radio-card-text">Moderate</span>
+                      <span class="radio-card-sub">3-5 days/week</span>
+                    </label>
+                  </div>
+                  <div class="radio-card">
+                    <input type="radio" name="activity_level" id="act-active" value="active">
+                    <label class="radio-card-label" for="act-active">
+                      <span class="radio-card-icon">💪</span>
+                      <span class="radio-card-text">Active</span>
+                      <span class="radio-card-sub">6-7 days/week</span>
+                    </label>
+                  </div>
+                </div>
+                <span id="activity-error" class="form-error"></span>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="sleep">Average Sleep (hours)</label>
+                <div class="range-wrap">
+                  <div class="range-value" id="sleep-display">7.0</div>
+                  <input type="range" id="sleep" class="form-range" min="0" max="12" step="0.5" value="7">
+                  <div class="range-labels"><span>0h</span><span>6h</span><span>12h</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Goal & Preferences -->
+            <div class="step-content" id="step-3">
+              <h3 class="mb-2">Goal & Preferences</h3>
+              <p class="text-muted mb-3" style="font-size: 0.9rem;">What are you aiming for?</p>
+
+              <div class="form-group">
+                <label class="form-label">Food Habits</label>
+                <div class="radio-cards radio-cards-5" id="food-cards">
+                  <div class="radio-card"><input type="radio" name="food_habits" id="food-veg" value="veg"><label class="radio-card-label" for="food-veg"><span class="radio-card-icon">🥬</span><span class="radio-card-text">Veg</span></label></div>
+                  <div class="radio-card"><input type="radio" name="food_habits" id="food-nonveg" value="non-veg" checked><label class="radio-card-label" for="food-nonveg"><span class="radio-card-icon">🍗</span><span class="radio-card-text">Non-Veg</span></label></div>
+                  <div class="radio-card"><input type="radio" name="food_habits" id="food-vegan" value="vegan"><label class="radio-card-label" for="food-vegan"><span class="radio-card-icon">🌱</span><span class="radio-card-text">Vegan</span></label></div>
+                  <div class="radio-card"><input type="radio" name="food_habits" id="food-keto" value="keto"><label class="radio-card-label" for="food-keto"><span class="radio-card-icon">🥑</span><span class="radio-card-text">Keto</span></label></div>
+                  <div class="radio-card"><input type="radio" name="food_habits" id="food-paleo" value="paleo"><label class="radio-card-label" for="food-paleo"><span class="radio-card-icon">🥩</span><span class="radio-card-text">Paleo</span></label></div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Fitness Goal <span class="required">*</span></label>
+                <div class="radio-cards radio-cards-3" id="goal-cards">
+                  <div class="radio-card">
+                    <input type="radio" name="fitness_goal" id="goal-loss" value="weight_loss">
+                    <label class="radio-card-label" for="goal-loss">
+                      <span class="radio-card-icon">📉</span>
+                      <span class="radio-card-text">Weight Loss</span>
+                      <span class="radio-card-sub">Lose fat & get lean</span>
+                    </label>
+                  </div>
+                  <div class="radio-card">
+                    <input type="radio" name="fitness_goal" id="goal-gain" value="muscle_gain">
+                    <label class="radio-card-label" for="goal-gain">
+                      <span class="radio-card-icon">💪</span>
+                      <span class="radio-card-text">Muscle Gain</span>
+                      <span class="radio-card-sub">Build strength & mass</span>
+                    </label>
+                  </div>
+                  <div class="radio-card">
+                    <input type="radio" name="fitness_goal" id="goal-maintain" value="maintenance">
+                    <label class="radio-card-label" for="goal-maintain">
+                      <span class="radio-card-icon">⚖️</span>
+                      <span class="radio-card-text">Maintenance</span>
+                      <span class="radio-card-sub">Stay fit & healthy</span>
+                    </label>
+                  </div>
+                </div>
+                <span id="goal-error" class="form-error"></span>
+              </div>
+            </div>
+
+            <!-- Step Actions -->
+            <div class="step-actions">
+              <button type="button" id="prev-btn" class="btn btn-ghost" style="display: none;">← Previous</button>
+              <div style="flex: 1;"></div>
+              <button type="button" id="next-btn" class="btn btn-primary">Next →</button>
+              <button type="submit" id="save-btn" class="btn btn-primary" style="display: none;">💾 Save Profile</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/toast.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/dark-mode.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>

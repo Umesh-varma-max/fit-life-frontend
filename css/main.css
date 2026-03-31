@@ -1,0 +1,252 @@
+/* ──────────────────────────────────────────────────
+   main.css — Global Design Tokens, Reset, Typography
+   ────────────────────────────────────────────────── */
+
+/* ─── Google Fonts ─── */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+/* ─── CSS Variables (Light Mode) ─── */
+:root {
+  /* Core Colors */
+  --bg:             #f0f4f8;
+  --bg-alt:         #e8eef5;
+  --card:           #ffffff;
+  --card-hover:     #f8fbff;
+  --text:           #1a1a2e;
+  --text-muted:     #6b7280;
+  --text-light:     #9ca3af;
+
+  /* Accent Colors */
+  --accent:         #00d4aa;
+  --accent-hover:   #00b894;
+  --accent-dark:    #00a884;
+  --accent-glow:    rgba(0, 212, 170, 0.25);
+  --accent-subtle:  rgba(0, 212, 170, 0.08);
+
+  /* Semantic Colors */
+  --danger:         #ff6b6b;
+  --danger-bg:      rgba(255, 107, 107, 0.1);
+  --warning:        #ffd93d;
+  --warning-bg:     rgba(255, 217, 61, 0.1);
+  --success:        #6bcb77;
+  --success-bg:     rgba(107, 203, 119, 0.1);
+  --info:           #4ea8de;
+  --info-bg:        rgba(78, 168, 222, 0.1);
+
+  /* Borders & Shadows */
+  --border:         #e0e7ef;
+  --border-light:   #f0f3f7;
+  --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow:         0 4px 24px rgba(0, 0, 0, 0.07);
+  --shadow-lg:      0 8px 40px rgba(0, 0, 0, 0.12);
+  --shadow-accent:  0 4px 20px rgba(0, 212, 170, 0.2);
+
+  /* Glass Effect */
+  --glass-bg:       rgba(255, 255, 255, 0.7);
+  --glass-border:   rgba(255, 255, 255, 0.3);
+  --glass-blur:     12px;
+
+  /* Typography */
+  --font-main:      'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:      'DM Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* Spacing */
+  --radius:         14px;
+  --radius-sm:      8px;
+  --radius-lg:      20px;
+  --radius-full:    9999px;
+
+  /* Layout */
+  --sidebar-w:      260px;
+  --sidebar-collapsed-w: 72px;
+  --header-h:       64px;
+  --page-max-w:     1400px;
+
+  /* Transitions */
+  --transition:     all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s ease;
+  --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Dark Mode Overrides ─── */
+[data-theme="dark"] {
+  --bg:             #0d0d1a;
+  --bg-alt:         #12122a;
+  --card:           #1a1a2e;
+  --card-hover:     #22223a;
+  --text:           #e8eaf6;
+  --text-muted:     #8888aa;
+  --text-light:     #5a5a7a;
+  --border:         #2a2a45;
+  --border-light:   #1e1e38;
+  --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow:         0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg:      0 8px 40px rgba(0, 0, 0, 0.5);
+  --glass-bg:       rgba(26, 26, 46, 0.7);
+  --glass-border:   rgba(42, 42, 69, 0.5);
+}
+
+/* ─── Reset ─── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-main);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 15px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ─── Typography ─── */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+h1 { font-size: 2rem; letter-spacing: -0.02em; }
+h2 { font-size: 1.5rem; letter-spacing: -0.01em; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.1rem; }
+h5 { font-size: 0.95rem; }
+h6 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+
+p {
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+strong { font-weight: 600; }
+
+small {
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--bg-alt);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ─── Links ─── */
+img { max-width: 100%; height: auto; display: block; }
+ul, ol { list-style: none; }
+
+/* ─── Selection ─── */
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ─── Utility Classes ─── */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-muted { color: var(--text-muted) !important; }
+.text-accent { color: var(--accent) !important; }
+.text-danger { color: var(--danger) !important; }
+.text-success { color: var(--success) !important; }
+.text-warning { color: var(--warning) !important; }
+
+.font-mono { font-family: var(--font-mono); }
+.font-bold { font-weight: 600; }
+.font-light { font-weight: 300; }
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mt-4 { margin-top: 32px; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+.mb-4 { margin-bottom: 32px; }
+
+.gap-1 { gap: 8px; }
+.gap-2 { gap: 16px; }
+.gap-3 { gap: 24px; }
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1; }
+
+.grid { display: grid; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+.hidden { display: none !important; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Focus Visible ─── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─── Responsive Helpers ─── */
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 769px) {
+  .hide-desktop { display: none !important; }
+}
