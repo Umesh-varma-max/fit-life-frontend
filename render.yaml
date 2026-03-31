@@ -1,7 +1,7 @@
 services:
-  - type: static
+  - type: web
     name: fitlife-frontend
-    env: static
+    runtime: static
     rootDir: .
     buildCommand: ""
     staticPublishPath: .
