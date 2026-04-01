@@ -47,6 +47,7 @@
   padding: 40px;
   box-shadow: var(--shadow-lg);
   animation: fadeInUp 0.6s ease;
+  width: 100%;
 }
 
 [data-theme="dark"] .auth-card {
@@ -169,7 +170,53 @@
 [data-theme="dark"] .auth-orb { opacity: 0.15; }
 
 @media (max-width: 480px) {
-  .auth-card { padding: 28px 20px; }
+  .auth-page {
+    align-items: flex-start;
+    padding: 80px 12px 24px;
+  }
+
+  .auth-container {
+    max-width: 100%;
+  }
+
+  .auth-card {
+    padding: 24px 16px;
+    border-radius: 20px;
+  }
+
   .auth-logo-text { font-size: 1.3rem; }
   .auth-logo-icon { width: 40px; height: 40px; font-size: 1.2rem; }
+  .auth-header {
+    margin-bottom: 24px;
+  }
+  .auth-options {
+    margin-bottom: 20px;
+  }
+  .auth-theme-toggle {
+    top: 12px;
+    right: 12px;
+  }
+  .auth-orb-1 {
+    width: 180px;
+    height: 180px;
+    top: -60px;
+    right: -60px;
+  }
+  .auth-orb-2 {
+    width: 160px;
+    height: 160px;
+    bottom: -40px;
+    left: -40px;
+  }
+}
+
+@media (max-width: 360px) {
+  .auth-page {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .auth-card {
+    padding: 20px 14px;
+  }
 }
