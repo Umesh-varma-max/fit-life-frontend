@@ -99,6 +99,7 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 body {
@@ -106,10 +107,25 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
-  font-size: 15px;
+  font-size: 16px;
   min-height: 100vh;
   overflow-x: hidden;
   transition: background 0.3s ease, color 0.3s ease;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+body,
+main,
+section,
+div {
+  min-width: 0;
 }
 
 /* ─── Typography ─── */
@@ -159,6 +175,7 @@ code {
 /* ─── Links ─── */
 img { max-width: 100%; height: auto; display: block; }
 ul, ol { list-style: none; }
+svg { max-width: 100%; display: block; }
 
 /* ─── Selection ─── */
 ::selection {
@@ -225,6 +242,7 @@ ul, ol { list-style: none; }
 .grid-4 { grid-template-columns: repeat(4, 1fr); }
 
 .hidden { display: none !important; }
+.w-full { width: 100%; }
 .sr-only {
   position: absolute;
   width: 1px;
@@ -245,6 +263,9 @@ ul, ol { list-style: none; }
 @media (max-width: 768px) {
   .hide-mobile { display: none !important; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  h1 { font-size: 1.75rem; }
+  h2 { font-size: 1.35rem; }
+  h3 { font-size: 1.15rem; }
 }
 
 @media (min-width: 769px) {

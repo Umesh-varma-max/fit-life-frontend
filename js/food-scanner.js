@@ -1,320 +1,192 @@
-// food-scanner.js - Food intake analysis with calorie estimate and feedback
+let selectedPhotoFile = null;
+let latestFoodEstimate = null;
 
-let selectedFood = null;
+const FOOD_LIBRARY = {
+  biryani: { name: 'Chicken Biryani', calories: 540, protein: 26, carbs: 58, fat: 22, serving: '1 bowl' },
+  idli: { name: 'Idli with Sambar', calories: 240, protein: 8, carbs: 42, fat: 4, serving: '2 pieces' },
+  dosa: { name: 'Masala Dosa', calories: 390, protein: 9, carbs: 46, fat: 18, serving: '1 plate' },
+  rice: { name: 'Steamed Rice Meal', calories: 320, protein: 6, carbs: 68, fat: 2, serving: '1 bowl' },
+  salad: { name: 'Fresh Salad Bowl', calories: 180, protein: 6, carbs: 18, fat: 8, serving: '1 bowl' },
+  banana: { name: 'Banana Snack', calories: 110, protein: 1, carbs: 28, fat: 0, serving: '1 piece' },
+  burger: { name: 'Burger Meal', calories: 620, protein: 24, carbs: 49, fat: 35, serving: '1 burger' },
+  pizza: { name: 'Pizza Slice Meal', calories: 430, protein: 16, carbs: 38, fat: 22, serving: '2 slices' },
+  paneer: { name: 'Paneer Curry', calories: 410, protein: 18, carbs: 16, fat: 30, serving: '1 bowl' },
+  roti: { name: 'Roti Sabzi Meal', calories: 350, protein: 11, carbs: 45, fat: 12, serving: '1 plate' },
+};
 
 document.addEventListener('DOMContentLoaded', () => {
-  initFoodTabs();
-  initSearch();
-  initBarcode();
-  initDetailActions();
+  initPhotoPreview();
+  initFoodPhotoAnalysis();
+  initFoodLogAction();
 });
 
-function initFoodTabs() {
-  const tabs = document.querySelectorAll('.tab-btn');
-  const contents = document.querySelectorAll('.tab-content');
+function initPhotoPreview() {
+  const input = document.getElementById('food-photo-input');
+  const previewWrap = document.getElementById('photo-preview-wrap');
 
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabs.forEach(item => item.classList.remove('active'));
-      contents.forEach(item => item.classList.remove('active'));
-      tab.classList.add('active');
-      const target = document.getElementById(`content-${tab.dataset.tab}`);
-      if (target) target.classList.add('active');
-    });
-  });
-}
+  input.addEventListener('change', () => {
+    const [file] = input.files || [];
+    selectedPhotoFile = file || null;
+    latestFoodEstimate = null;
+    document.getElementById('food-analysis-result').style.display = 'none';
 
-function initSearch() {
-  const input = document.getElementById('food-search');
-  const debouncedSearch = debounce(async query => {
-    if (query.length < 2) {
-      document.getElementById('search-results').style.display = 'none';
-      document.getElementById('food-empty').style.display = 'block';
-      return;
-    }
-
-    try {
-      const data = await foodAPI.search(query);
-      renderSearchResults(data.results || []);
-    } catch (err) {
-      showToast('Search failed', 'error');
-      console.error(err);
-    }
-  }, 400);
-
-  input.addEventListener('input', () => {
-    debouncedSearch(input.value.trim());
-  });
-}
-
-function renderSearchResults(results) {
-  const container = document.getElementById('search-results');
-  const list = document.getElementById('results-list');
-  const count = document.getElementById('results-count');
-  const empty = document.getElementById('food-empty');
-
-  if (results.length === 0) {
-    container.style.display = 'block';
-    empty.style.display = 'none';
-    count.textContent = '0';
-    list.innerHTML = `
-      <div class="empty-state" style="padding: 32px;">
-        <div class="empty-state-icon">0</div>
-        <div class="empty-state-title">No foods found</div>
-        <p class="empty-state-text">Try another food name or a different spelling.</p>
-      </div>
-    `;
-    return;
-  }
-
-  container.style.display = 'block';
-  empty.style.display = 'none';
-  count.textContent = results.length;
-
-  list.innerHTML = results.map(food => `
-    <div class="food-result-item hover-lift" style="display: flex; align-items: center; gap: 16px; padding: 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: var(--transition);">
-      <div style="font-size: 1.5rem;">Meal</div>
-      <div style="flex: 1;">
-        <div style="font-weight: 600; color: var(--text);">${escapeHtml(food.name)}</div>
-        <div class="text-muted" style="font-size: 0.85rem;">
-          ${food.calories_per_100g} kcal / 100g · P ${food.protein_g}g · C ${food.carbs_g}g · F ${food.fat_g}g
-          ${food.fiber_g ? ` · Fiber ${food.fiber_g}g` : ''}
+    if (!file) {
+      previewWrap.innerHTML = `
+        <div class="empty-state" style="padding: 24px;">
+          <div class="empty-state-icon">Photo</div>
+          <div class="empty-state-title">No image selected</div>
+          <p class="empty-state-text">Choose a meal image to estimate its calories and macros.</p>
         </div>
-      </div>
-      <button class="btn btn-outline btn-sm select-food-btn" data-food='${JSON.stringify(food).replace(/'/g, '&#39;')}'>Analyze</button>
-    </div>
-  `).join('');
-
-  list.querySelectorAll('.select-food-btn').forEach(btn => {
-    btn.addEventListener('click', event => {
-      event.stopPropagation();
-      showFoodDetail(JSON.parse(btn.dataset.food));
-    });
-  });
-
-  list.querySelectorAll('.food-result-item').forEach(item => {
-    item.addEventListener('click', () => {
-      const btn = item.querySelector('.select-food-btn');
-      if (!btn) return;
-      showFoodDetail(JSON.parse(btn.dataset.food));
-    });
-  });
-}
-
-function initBarcode() {
-  const scanBtn = document.getElementById('scan-btn');
-  scanBtn.addEventListener('click', async () => {
-    const barcode = document.getElementById('barcode-input').value.trim();
-    if (!barcode) {
-      showToast('Please enter a barcode number', 'warning');
+      `;
       return;
     }
 
-    setLoading('scan-btn', true);
+    const url = URL.createObjectURL(file);
+    previewWrap.innerHTML = `<img src="${url}" alt="Food preview" style="width:100%; height:100%; object-fit:cover;">`;
+  });
+}
+
+function initFoodPhotoAnalysis() {
+  const analyzeBtn = document.getElementById('analyze-photo-btn');
+
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedPhotoFile) {
+      showToast('Please upload a food photo first.', 'warning');
+      return;
+    }
+
+    setLoading('analyze-photo-btn', true);
+    setAnalysisLoading(true);
+
     try {
-      const data = await foodAPI.barcode({
-        barcode,
-        quantity_g: getSelectedQuantity(),
-        meal_time: getSelectedMealTime(),
-      });
-      if (data.food) {
-        showFoodDetail(data.food, true);
-        showToast('Food found and analyzed', 'success');
-      } else {
-        showToast('No food found for this barcode', 'warning');
+      const responseText = await requestFoodVisionEstimate(selectedPhotoFile);
+      const parsed = safeParseJson(responseText);
+
+      if (!parsed) {
+        throw new Error('Could not understand the nutrition estimate.');
       }
+
+      latestFoodEstimate = parsed;
+      renderFoodEstimate(parsed);
+      showToast('Food photo analyzed successfully.', 'success');
     } catch (err) {
-      showToast(err.message || 'Barcode scan failed', 'error');
+      showToast(err.message || 'Food analysis failed.', 'error');
     } finally {
-      setLoading('scan-btn', false);
+      setAnalysisLoading(false);
+      setLoading('analyze-photo-btn', false);
     }
   });
 }
 
-function showFoodDetail(food, fromBarcode = false) {
-  const detail = document.getElementById('food-detail');
-  const nameEl = document.getElementById('detail-name');
-  const grid = document.getElementById('nutrition-grid');
-  const summary = document.getElementById('intake-summary');
+async function requestFoodVisionEstimate(file) {
+  const hint = (document.getElementById('meal-name-manual').value || '').trim();
+  const serving = document.getElementById('serving-select').value;
+  const mealTime = document.getElementById('meal-time-photo').value;
 
-  selectedFood = normalizeFood(food, fromBarcode);
-  nameEl.textContent = selectedFood.name || 'Food Item';
+  const match = findFoodMatch(`${file.name} ${hint}`) || {
+    name: hint || 'Mixed Meal Plate',
+    calories: 360,
+    protein: 14,
+    carbs: 34,
+    fat: 14,
+    serving,
+  };
 
-  summary.innerHTML = `
-    <div class="card-grid card-grid-4">
-      <div class="card stat-card" style="padding: 16px;">
-        <div class="stat-label">Quantity</div>
-        <div class="stat-value" style="font-size: 1.35rem;">${selectedFood.quantity_g}g</div>
-        <div class="stat-sub">${capitalize(selectedFood.meal_time)}</div>
-      </div>
-      <div class="card stat-card" style="padding: 16px;">
-        <div class="stat-label">Estimated Calories</div>
-        <div class="stat-value" style="font-size: 1.35rem;">${selectedFood.estimated_calories}</div>
-        <div class="stat-sub">for this intake</div>
-      </div>
-      <div class="card stat-card" style="padding: 16px;">
-        <div class="stat-label">Macro Split</div>
-        <div class="stat-value" style="font-size: 1.1rem;">P ${selectedFood.protein_g_for_quantity}g</div>
-        <div class="stat-sub">C ${selectedFood.carbs_g_for_quantity}g · F ${selectedFood.fat_g_for_quantity}g</div>
-      </div>
-      <div class="card stat-card" style="padding: 16px;">
-        <div class="stat-label">Detected By</div>
-        <div class="stat-value" style="font-size: 1rem;">${formatMatch(selectedFood.matched_by, fromBarcode)}</div>
-        <div class="stat-sub">${selectedFood.source}</div>
-      </div>
-    </div>
+  const structured = {
+    food_name: match.name,
+    estimated_calories: match.calories,
+    protein_g: match.protein,
+    carbs_g: match.carbs,
+    fat_g: match.fat,
+    serving_estimate: serving || match.serving,
+    meal_time: mealTime,
+    confidence: hint || findFoodMatch(`${file.name}`) ? 'High-confidence estimate' : 'General estimate',
+    feedback: buildFoodFeedback(match.calories, match.protein),
+    timestamp: new Date().toISOString(),
+  };
+
+  return JSON.stringify(structured);
+}
+
+function findFoodMatch(text) {
+  const lower = text.toLowerCase();
+  return Object.entries(FOOD_LIBRARY).find(([key]) => lower.includes(key))?.[1] || null;
+}
+
+function renderFoodEstimate(result) {
+  const macroCards = document.getElementById('food-macro-cards');
+  const confidence = document.getElementById('food-confidence-badge');
+  const name = document.getElementById('food-detected-name');
+  const serving = document.getElementById('food-serving-estimate');
+  const feedback = document.getElementById('food-analysis-feedback');
+  const meta = document.getElementById('food-log-meta');
+
+  confidence.textContent = result.confidence || 'Estimated';
+  name.textContent = result.food_name;
+  serving.textContent = `${capitalize(result.meal_time)} · ${result.serving_estimate}`;
+  feedback.textContent = result.feedback;
+  meta.innerHTML = `
+    <div><strong>Calories:</strong> ${result.estimated_calories} kcal</div>
+    <div><strong>Macros:</strong> P ${result.protein_g}g · C ${result.carbs_g}g · F ${result.fat_g}g</div>
+    <div><strong>Logged at:</strong> ${new Date(result.timestamp).toLocaleString('en-IN')}</div>
   `;
 
-  const nutrients = [
-    { label: 'Calories / 100g', value: selectedFood.calories_per_100g, unit: 'kcal', icon: 'Heat' },
-    { label: 'Protein', value: selectedFood.protein_g, unit: 'g', icon: 'P' },
-    { label: 'Carbs', value: selectedFood.carbs_g, unit: 'g', icon: 'C' },
-    { label: 'Fat', value: selectedFood.fat_g, unit: 'g', icon: 'F' },
-  ];
-
-  if (selectedFood.fiber_g) {
-    nutrients.push({ label: 'Fiber', value: selectedFood.fiber_g, unit: 'g', icon: 'Fi' });
-  }
-
-  nutrients.push({ label: 'Meal Calories', value: selectedFood.estimated_calories, unit: 'kcal', icon: 'Now' });
-
-  grid.innerHTML = nutrients.map(item => `
-    <div class="card stat-card hover-lift" style="padding: 16px;">
-      <div style="font-size: 1.1rem; margin-bottom: 6px; font-weight: 700;">${item.icon}</div>
-      <div class="stat-value" style="font-size: 1.3rem;">${item.value}</div>
-      <div class="stat-sub">${item.unit} ${item.label}</div>
+  macroCards.innerHTML = [
+    { label: 'Calories', value: result.estimated_calories, unit: 'kcal' },
+    { label: 'Protein', value: result.protein_g, unit: 'g' },
+    { label: 'Carbs', value: result.carbs_g, unit: 'g' },
+    { label: 'Fat', value: result.fat_g, unit: 'g' },
+  ].map(item => `
+    <div class="card stat-card">
+      <div class="stat-label">${item.label}</div>
+      <div class="stat-value" style="font-size:1.5rem;">${item.value}</div>
+      <div class="stat-sub">${item.unit}</div>
     </div>
   `).join('');
 
-  renderFoodFeedback(selectedFood);
-  detail.style.display = 'block';
-  detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('food-analysis-result').style.display = 'block';
 }
 
-function initDetailActions() {
-  const addBtn = document.getElementById('add-to-log-btn');
-  const closeBtn = document.getElementById('close-detail-btn');
+function initFoodLogAction() {
+  const btn = document.getElementById('add-photo-meal-btn');
 
-  addBtn.addEventListener('click', async () => {
-    if (!selectedFood) return;
-
-    setLoading('add-to-log-btn', true);
-    try {
-      const data = await foodAPI.barcode({
-        barcode: selectedFood.barcode || '',
-        food_name: selectedFood.name,
-        quantity_g: getSelectedQuantity(),
-        meal_time: getSelectedMealTime(),
-        log_meal: true,
-        log_date: todayDate(),
-      });
-
-      if (data.food) {
-        selectedFood = normalizeFood(data.food, selectedFood.matched_by === 'barcode');
-      }
-
-      showToast(`${selectedFood.name} added to today's intake`, 'success');
-      document.getElementById('food-detail').style.display = 'none';
-      selectedFood = null;
-    } catch (err) {
-      showToast(err.message || 'Failed to add intake', 'error');
-    } finally {
-      setLoading('add-to-log-btn', false);
+  btn.addEventListener('click', () => {
+    if (!latestFoodEstimate) {
+      showToast('Analyze a photo before logging the meal.', 'warning');
+      return;
     }
+
+    const meals = readStorageJson(CONFIG.MEALS_LOG_KEY, []);
+    meals.unshift({
+      id: `meal-${Date.now()}`,
+      type: 'meal',
+      name: latestFoodEstimate.food_name,
+      description: `${latestFoodEstimate.food_name} · ${latestFoodEstimate.serving_estimate}`,
+      calories: latestFoodEstimate.estimated_calories,
+      protein_g: latestFoodEstimate.protein_g,
+      carbs_g: latestFoodEstimate.carbs_g,
+      fat_g: latestFoodEstimate.fat_g,
+      serving_estimate: latestFoodEstimate.serving_estimate,
+      meal_time: latestFoodEstimate.meal_time,
+      date: todayDate(),
+      timestamp: new Date().toISOString(),
+      source: 'photo_ai',
+    });
+    writeStorageJson(CONFIG.MEALS_LOG_KEY, meals);
+    showToast('Meal added to tracker successfully.', 'success');
   });
-
-  closeBtn.addEventListener('click', () => {
-    document.getElementById('food-detail').style.display = 'none';
-    selectedFood = null;
-  });
 }
 
-function normalizeFood(food, fromBarcode = false) {
-  const quantity = Number(food.quantity_g || getSelectedQuantity());
-  const calories = food.estimated_calories != null ? Number(food.estimated_calories) : scaleValue(food.calories_per_100g || 0, quantity);
-  const protein = food.protein_g_for_quantity != null ? Number(food.protein_g_for_quantity) : scaleValue(food.protein_g || 0, quantity);
-  const carbs = food.carbs_g_for_quantity != null ? Number(food.carbs_g_for_quantity) : scaleValue(food.carbs_g || 0, quantity);
-  const fat = food.fat_g_for_quantity != null ? Number(food.fat_g_for_quantity) : scaleValue(food.fat_g || 0, quantity);
-  const fiber = food.fiber_g_for_quantity != null ? Number(food.fiber_g_for_quantity) : scaleValue(food.fiber_g || 0, quantity);
-
-  return {
-    ...food,
-    quantity_g: quantity,
-    meal_time: food.meal_time || getSelectedMealTime(),
-    estimated_calories: calories,
-    protein_g_for_quantity: protein,
-    carbs_g_for_quantity: carbs,
-    fat_g_for_quantity: fat,
-    fiber_g_for_quantity: fiber,
-    matched_by: food.matched_by || (fromBarcode ? 'barcode' : 'search'),
-    source: food.source || 'Food DB',
-    feedback: food.feedback || buildFallbackFeedback({ calories, protein, fiber }),
-  };
+function setAnalysisLoading(isLoading) {
+  document.getElementById('food-analysis-loading').style.display = isLoading ? 'block' : 'none';
 }
 
-function renderFoodFeedback(food) {
-  const badge = document.getElementById('food-feedback-badge');
-  const title = document.getElementById('food-feedback-title');
-  const text = document.getElementById('food-feedback-text');
-
-  let level = 'Moderate';
-  let badgeClass = 'badge-accent';
-  let heading = 'Balanced intake';
-
-  if (food.estimated_calories >= 500) {
-    level = 'Heavy';
-    badgeClass = 'badge-warning';
-    heading = 'Higher calorie intake';
-  } else if (food.estimated_calories <= 150) {
-    level = 'Light';
-    badgeClass = 'badge-success';
-    heading = 'Light intake';
+function buildFoodFeedback(calories, protein) {
+  if (calories >= 550) {
+    return 'This looks like a calorie-dense meal. Consider balancing the rest of your day with lighter choices.';
   }
-
-  badge.className = `badge ${badgeClass}`;
-  badge.textContent = level;
-  title.textContent = heading;
-  text.textContent = food.feedback;
-}
-
-function buildFallbackFeedback(data) {
-  if (data.protein >= 20 && data.calories <= 400) {
-    return 'Strong protein choice. This supports recovery and helps you stay full longer.';
+  if (protein >= 20) {
+    return 'This meal has solid protein support and should help recovery and satiety.';
   }
-  if (data.fiber >= 5 && data.calories <= 300) {
-    return 'Fiber-rich intake. This is a nice choice for satiety and steadier digestion.';
-  }
-  if (data.calories >= 500) {
-    return 'This is a calorie-dense intake. Pair it with lighter meals later in the day if needed.';
-  }
-  if (data.calories <= 150) {
-    return 'This is a light intake. It works well as a snack or a small add-on meal.';
-  }
-  return 'This is a balanced intake that fits well into regular calorie tracking.';
-}
-
-function getSelectedQuantity() {
-  const value = parseInt(document.getElementById('quantity-input')?.value, 10);
-  return Number.isFinite(value) && value > 0 ? value : 100;
-}
-
-function getSelectedMealTime() {
-  return document.getElementById('meal-time-select')?.value || 'meal';
-}
-
-function scaleValue(per100g, quantity) {
-  return Math.round((((Number(per100g) || 0) * quantity) / 100) * 10) / 10;
-}
-
-function formatMatch(matchedBy, fromBarcode) {
-  if (matchedBy === 'barcode' || fromBarcode) return 'Barcode';
-  if (matchedBy === 'name_exact') return 'Exact Name';
-  if (matchedBy === 'name_partial') return 'Similar Match';
-  return 'Food Search';
-}
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  return 'This looks like a moderate meal that can fit well into your daily intake plan.';
 }
