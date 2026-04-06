@@ -246,53 +246,6 @@
   padding-bottom: 110px;
 }
 
-.mobile-tab-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: none;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid var(--border);
-  z-index: 75;
-}
-
-[data-theme="dark"] .mobile-tab-bar {
-  background: rgba(13, 13, 26, 0.96);
-}
-
-body.workout-page .mobile-tab-bar {
-  display: none !important;
-}
-
-.mobile-tab-link {
-  min-height: 48px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 8px 6px;
-  color: var(--text-muted);
-  background: transparent;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.mobile-tab-link.active {
-  background: var(--accent-subtle);
-  color: var(--accent);
-}
-
-.mobile-tab-text {
-  line-height: 1.2;
-}
-
 .page-header {
   display: flex;
   align-items: center;
@@ -385,11 +338,6 @@ body.workout-page .mobile-tab-bar {
 
   .page-content {
     padding: 20px 16px;
-    padding-bottom: 96px;
-  }
-
-  .mobile-tab-bar {
-    display: grid;
   }
 
   .card-grid-2,
@@ -406,9 +354,5 @@ body.workout-page .mobile-tab-bar {
 
   .topbar-right {
     width: 100%;
-  }
-
-  .mobile-tab-bar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

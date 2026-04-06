@@ -5,7 +5,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   setupSidebar();
   loadUserInfo();
-  mountMobileTabBar();
 });
 
 function setupSidebar() {
@@ -52,29 +51,4 @@ function loadUserInfo() {
   if (emailEl) emailEl.textContent = user.email || '';
   if (avatarEl) avatarEl.textContent = (user.full_name || 'U').charAt(0).toUpperCase();
   if (greetEl) greetEl.textContent = `${getGreeting()}, ${(user.full_name || 'User').split(' ')[0]}!`;
-}
-
-function mountMobileTabBar() {
-  if (document.getElementById('mobile-tab-bar')) return;
-
-  const tabs = [
-    { href: 'dashboard.html', label: 'Home' },
-    { href: 'tracker.html', label: 'Tracker' },
-    { href: 'food-scanner.html', label: 'Food' },
-    { href: 'workout.html', label: 'Workout' },
-    { href: 'recommendations.html', label: 'Plan' },
-  ];
-
-  const current = (window.location.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
-  const nav = document.createElement('nav');
-  nav.id = 'mobile-tab-bar';
-  nav.className = 'mobile-tab-bar';
-  nav.setAttribute('aria-label', 'Mobile navigation');
-  nav.innerHTML = tabs.map(tab => `
-    <a href="${tab.href}" class="mobile-tab-link ${current === tab.href.toLowerCase() ? 'active' : ''}">
-      <span class="mobile-tab-text">${tab.label}</span>
-    </a>
-  `).join('');
-
-  document.body.appendChild(nav);
 }
