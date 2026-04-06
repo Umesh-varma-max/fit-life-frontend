@@ -34,7 +34,41 @@ async function apiFetch(endpoint, options = {}) {
   if (response.status === 401) {
     localStorage.removeItem(CONFIG.TOKEN_KEY);
     localStorage.removeItem(CONFIG.USER_KEY);
-    window.location.href = '/index.html';
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const error = new Error(data.message || 'Request failed');
+    error.status = response.status;
+    error.errors = data.errors || null;
+    throw error;
+  }
+
+  return data;
+}
+
+async function apiFetchForm(endpoint, formData, options = {}) {
+  let response;
+  try {
+    response = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
+      method: options.method || 'POST',
+      body: formData,
+      headers: {
+        ...(getToken() ? { 'Authorization': `Bearer ${getToken()}` } : {}),
+        ...(options.headers || {}),
+      },
+    });
+  } catch (err) {
+    throw new Error('Network error - check your connection');
+  }
+
+  if (response.status === 401) {
+    localStorage.removeItem(CONFIG.TOKEN_KEY);
+    localStorage.removeItem(CONFIG.USER_KEY);
+    window.location.href = 'index.html';
     return;
   }
 
@@ -83,6 +117,7 @@ const activityAPI = {
 const foodAPI = {
   search:  (q)    => apiFetch(`/food/search?q=${encodeURIComponent(q)}`),
   barcode: (body) => apiFetch('/food/scan', { method: 'POST', body: JSON.stringify(body) }),
+  analyzePhoto: (formData) => apiFetchForm('/food/analyze-photo', formData),
 };
 
 // ─── WORKOUT ─────────────────────────────────────

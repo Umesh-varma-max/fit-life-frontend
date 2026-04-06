@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="FitLife Food Scanner - Analyze food intake, calories, and meal feedback.">
+  <meta name="description" content="FitLife Vision Scanner - Capture meals with your camera and review nutrition instantly.">
   <title>Food Scanner - FitLife</title>
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/components.css">
@@ -57,99 +57,141 @@
       </div>
     </header>
 
-    <main class="page-content">
-      <div class="card mb-3 animate-fade-in-up">
-        <div class="card-body">
-          <div class="tab-bar mb-3">
-            <button class="tab-btn active" id="tab-search" data-tab="search">Text Search</button>
-            <button class="tab-btn" id="tab-barcode" data-tab="barcode">Barcode Scan</button>
-          </div>
-
-          <div class="tab-content active" id="content-search">
-            <div class="form-group" style="margin-bottom: 16px;">
-              <div class="input-icon-wrap">
-                <input type="text" id="food-search" class="form-input" placeholder="Search foods... e.g. banana, rice, chicken">
-                <span class="input-icon">Find</span>
-              </div>
+    <main class="page-content page-shell">
+      <section class="scanner-hero card card-glass mb-3">
+        <div class="card-body scanner-hero-body">
+          <div class="scanner-copy">
+            <div class="scanner-chip">
+              <span class="scanner-chip-dot"></span>
+              <span>Vision Nutrition Active</span>
             </div>
-            <div class="card-grid card-grid-2">
-              <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" for="quantity-input">Quantity (grams)</label>
-                <input type="number" id="quantity-input" class="form-input" min="1" step="1" value="100">
-              </div>
-              <div class="form-group" style="margin-bottom: 0;">
+            <h1 class="scanner-title">AI Meal Scanner</h1>
+            <p class="scanner-subtitle">Open the camera, frame the meal, review the detected calories and macros, then save it to your meal log.</p>
+
+            <div class="scanner-action-row">
+              <button id="open-camera-btn" class="btn btn-primary scanner-cta">Scan with Camera</button>
+              <button id="upload-photo-btn" class="btn btn-ghost scanner-cta">Upload Image</button>
+              <input id="food-file-input" type="file" accept="image/*" capture="environment" class="hidden">
+            </div>
+
+            <div class="scanner-meta-grid">
+              <div class="form-group">
                 <label class="form-label" for="meal-time-select">Meal Time</label>
-                <select id="meal-time-select" class="form-input">
+                <select id="meal-time-select" class="form-select">
                   <option value="breakfast">Breakfast</option>
                   <option value="lunch">Lunch</option>
                   <option value="snack">Snack</option>
                   <option value="dinner">Dinner</option>
                 </select>
               </div>
-            </div>
-          </div>
-
-          <div class="tab-content" id="content-barcode">
-            <div style="display: flex; gap: 12px; align-items: flex-end;">
-              <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                <label class="form-label" for="barcode-input">Barcode Number</label>
-                <input type="text" id="barcode-input" class="form-input" placeholder="Enter barcode (e.g. 8901234567890)">
+              <div class="form-group">
+                <label class="form-label" for="manual-food-hint">Optional Food Hint</label>
+                <input id="manual-food-hint" type="text" class="form-input" placeholder="e.g. biryani, salad bowl">
               </div>
-              <button id="scan-btn" class="btn btn-primary btn-sm" style="margin-bottom: 0;">Scan</button>
             </div>
-            <p class="text-muted" style="margin-top: 12px; font-size: 0.85rem;">
-              The scan uses your selected quantity and meal time to estimate calories and log the intake correctly.
-            </p>
+          </div>
+
+          <div class="scanner-stage" id="scanner-stage">
+            <div id="scanner-idle" class="scanner-panel scanner-panel-active">
+              <div class="scanner-background"></div>
+              <div class="scanner-grid"></div>
+              <div class="scanner-vignette"></div>
+              <div class="scanner-ripple scanner-ripple-sm"></div>
+              <div class="scanner-ripple scanner-ripple-md"></div>
+              <div class="scanner-ripple scanner-ripple-lg"></div>
+              <div class="scanner-stage-overlay">
+                <div class="scanner-floating-card scanner-floating-top">
+                  <div class="scanner-float-label">Calories</div>
+                  <div class="scanner-float-value">420 kcal</div>
+                </div>
+                <div class="scanner-floating-card scanner-floating-bottom">
+                  <div class="scanner-float-label">Protein</div>
+                  <div class="scanner-float-value">24 g</div>
+                </div>
+                <div class="scanner-frame">
+                  <span class="scanner-corner scanner-corner-tl"></span>
+                  <span class="scanner-corner scanner-corner-tr"></span>
+                  <span class="scanner-corner scanner-corner-bl"></span>
+                  <span class="scanner-corner scanner-corner-br"></span>
+                  <span class="scanner-sweep"></span>
+                </div>
+              </div>
+            </div>
+
+            <div id="scanner-camera" class="scanner-panel">
+              <video id="camera-video" playsinline autoplay muted class="scanner-video"></video>
+              <div class="scanner-stage-overlay">
+                <div class="scanner-frame scanner-frame-live">
+                  <span class="scanner-corner scanner-corner-tl"></span>
+                  <span class="scanner-corner scanner-corner-tr"></span>
+                  <span class="scanner-corner scanner-corner-bl"></span>
+                  <span class="scanner-corner scanner-corner-br"></span>
+                  <span class="scanner-sweep"></span>
+                </div>
+                <p class="scanner-camera-hint">Point the frame at your meal</p>
+              </div>
+            </div>
+
+            <div id="scanner-preview" class="scanner-panel">
+              <img id="preview-image" src="" alt="Meal preview" class="scanner-preview-image">
+              <div id="scanner-analyzing" class="scanner-analyzing hidden">
+                <div class="scanner-analyze-box">
+                  <div class="scanner-sweep scanner-sweep-vertical"></div>
+                  <div class="spinner spinner-lg"></div>
+                  <div class="scanner-analyze-text">Analyzing your meal</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div id="search-results" class="mb-3" style="display: none;">
-        <div class="card animate-fade-in-up">
-          <div class="card-header">
-            <span class="card-title">Search Results</span>
-            <span class="badge badge-accent" id="results-count">0</span>
-          </div>
-          <div class="card-body" id="results-list"></div>
+      <section class="scanner-control-strip card mb-3">
+        <div class="card-body scanner-controls">
+          <button id="cancel-camera-btn" class="btn btn-ghost hidden">Close Camera</button>
+          <button id="retake-photo-btn" class="btn btn-ghost hidden">Retake</button>
+          <button id="capture-photo-btn" class="btn btn-primary hidden">Capture Photo</button>
+          <button id="analyze-photo-btn" class="btn btn-primary hidden">Analyze Photo</button>
+          <button id="reset-scanner-btn" class="btn btn-outline">Reset Scanner</button>
         </div>
-      </div>
+      </section>
 
-      <div id="food-detail" class="mb-3" style="display: none;">
-        <div class="card card-glass animate-fade-in-up">
+      <div class="scanner-results-grid">
+        <section id="analysis-result-card" class="card hidden">
           <div class="card-header">
-            <span class="card-title" id="detail-name">Food Details</span>
+            <span class="card-title">Nutrition Result</span>
+            <span id="analysis-confidence" class="badge badge-accent">Estimated</span>
           </div>
           <div class="card-body">
-            <div id="intake-summary" class="mb-3"></div>
-            <div class="card-grid card-grid-4 mb-3" id="nutrition-grid"></div>
-            <div class="card" style="background: var(--surface-2); border: 1px solid var(--border);">
-              <div class="card-body" style="padding: 20px;">
-                <div style="display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center;">
-                  <div>
-                    <div class="text-muted" style="font-size: 0.8rem;">Meal Feedback</div>
-                    <div id="food-feedback-title" style="font-weight: 700; color: var(--text); margin-top: 4px;">Balanced intake</div>
-                  </div>
-                  <span id="food-feedback-badge" class="badge badge-accent">Moderate</span>
-                </div>
-                <p id="food-feedback-text" class="text-muted" style="margin-top: 12px; line-height: 1.6; margin-bottom: 0;"></p>
+            <div class="scanner-result-head">
+              <div>
+                <h3 id="analysis-food-name" class="section-title">Food Item</h3>
+                <p id="analysis-serving" class="section-subtitle">1 serving</p>
               </div>
+              <button id="log-meal-btn" class="btn btn-primary">Add to Meal Log</button>
             </div>
-            <div style="display: flex; gap: 12px; justify-content: center; margin-top: 16px;">
-              <button id="add-to-log-btn" class="btn btn-primary">Mark as Eaten</button>
-              <button id="close-detail-btn" class="btn btn-ghost">Close</button>
+
+            <div id="analysis-macro-grid" class="stats-grid mt-2"></div>
+
+            <div class="scanner-feedback-card mt-2">
+              <div class="scanner-feedback-label">Meal Feedback</div>
+              <p id="analysis-feedback" class="scanner-feedback-copy"></p>
+            </div>
+
+            <div class="scanner-ingredients mt-2">
+              <div class="scanner-feedback-label">Analysis Notes</div>
+              <div id="analysis-tags" class="exercise-inline-meta"></div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div id="food-empty" class="card animate-fade-in-up delay-1">
-        <div class="card-body" style="text-align: center; padding: 60px 24px;">
-          <div style="font-size: 3.5rem; margin-bottom: 16px;">Food</div>
-          <h3 style="color: var(--text); margin-bottom: 8px;">Track Real Intake</h3>
-          <p class="text-muted" style="max-width: 460px; margin: 0 auto; line-height: 1.6;">
-            Search or scan what you are about to eat, review the estimated calories for the exact quantity, and save it with meal-specific feedback.
-          </p>
-        </div>
+        <section class="card">
+          <div class="card-header">
+            <span class="card-title">Recent Scans</span>
+            <span id="history-count" class="badge badge-info">0</span>
+          </div>
+          <div id="scan-history-list" class="card-body"></div>
+        </section>
       </div>
     </main>
   </div>
