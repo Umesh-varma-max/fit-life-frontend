@@ -744,3 +744,153 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Mobile-first app shell overrides */
+.sidebar {
+  transform: translateX(-100%);
+  width: min(84vw, 300px);
+  box-shadow: var(--shadow-lg);
+}
+
+.sidebar.open {
+  transform: translateX(0);
+}
+
+.main-wrap {
+  margin-left: 0;
+  min-width: 0;
+}
+
+.topbar {
+  height: auto;
+  min-height: var(--header-h);
+  padding: 12px 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.topbar-left,
+.topbar-right {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.topbar-left {
+  flex: 1 1 auto;
+}
+
+.topbar-title {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.topbar-right {
+  width: 100%;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.scanner-shortcut-btn,
+.scanner-shortcut,
+.hamburger {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+}
+
+.hamburger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-content {
+  padding: 16px;
+  padding-bottom: 88px;
+  min-width: 0;
+}
+
+.content-grid,
+.card-grid,
+.card-grid-2,
+.card-grid-3,
+.card-grid-4,
+.stats-grid {
+  grid-template-columns: 1fr;
+}
+
+.sidebar-overlay {
+  display: block;
+}
+
+@media (min-width: 640px) {
+  .topbar {
+    padding: 14px 20px;
+  }
+
+  .page-content {
+    padding: 20px;
+    padding-bottom: 96px;
+  }
+
+  .stats-grid,
+  .card-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 769px) {
+  .sidebar {
+    transform: none;
+    width: var(--sidebar-w);
+    box-shadow: none;
+  }
+
+  .main-wrap {
+    margin-left: var(--sidebar-w);
+  }
+
+  .topbar {
+    padding: 0 24px;
+    height: var(--header-h);
+    flex-wrap: nowrap;
+  }
+
+  .topbar-right {
+    width: auto;
+  }
+
+  .hamburger {
+    display: none;
+  }
+
+  .page-content {
+    padding: 24px 24px 32px;
+  }
+
+  .sidebar-overlay {
+    display: none;
+  }
+
+  .card-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .topbar {
+    padding: 0 32px;
+  }
+
+  .page-content {
+    padding: 32px;
+  }
+
+  .card-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .card-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

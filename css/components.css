@@ -1430,3 +1430,170 @@
     flex-wrap: wrap;
   }
 }
+
+/* Mobile-first shared component refinements */
+.card-header {
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 16px 16px 0;
+}
+
+.card-body {
+  padding: 14px 16px 16px;
+}
+
+.card-footer {
+  padding: 14px 16px;
+}
+
+.stat-card {
+  padding: 18px;
+}
+
+.stat-card .stat-value {
+  font-size: clamp(1.6rem, 6vw, 2rem);
+}
+
+.btn {
+  min-height: 44px;
+  width: 100%;
+  padding: 12px 18px;
+}
+
+.btn-icon {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+}
+
+.btn-group {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.card-grid,
+.card-grid-2,
+.card-grid-3,
+.card-grid-4 {
+  grid-template-columns: 1fr;
+}
+
+.modal-overlay {
+  padding: 12px;
+  align-items: flex-end;
+}
+
+.modal {
+  width: 100%;
+  max-width: none;
+  max-height: min(92vh, 900px);
+  border-radius: 24px 24px 0 0;
+}
+
+.modal-header,
+.modal-body,
+.modal-footer {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.scanner-stage {
+  min-height: 320px;
+}
+
+.scanner-frame {
+  width: min(84vw, 320px);
+  inset: 14px;
+}
+
+.scanner-floating-card {
+  max-width: calc(100% - 28px);
+}
+
+.scanner-floating-top {
+  top: 14px;
+  left: 14px;
+}
+
+.scanner-floating-bottom {
+  right: 14px;
+  bottom: 14px;
+}
+
+.scanner-history-item {
+  gap: 12px;
+}
+
+.scanner-history-thumb {
+  width: 56px;
+  height: 56px;
+}
+
+@media (min-width: 640px) {
+  .btn {
+    width: auto;
+  }
+
+  .btn-group {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .card-grid-2,
+  .scanner-action-row,
+  .scanner-controls,
+  .scanner-meta-grid,
+  .scanner-results-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .card-header {
+    padding: 18px 20px 0;
+  }
+
+  .card-body {
+    padding: 16px 20px 20px;
+  }
+
+  .card-footer {
+    padding: 16px 20px;
+  }
+
+  .card-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .modal-overlay {
+    padding: 24px;
+    align-items: center;
+  }
+
+  .modal {
+    max-width: 720px;
+    border-radius: var(--radius-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-header {
+    padding: 20px 24px 0;
+  }
+
+  .card-body {
+    padding: 16px 24px 24px;
+  }
+
+  .card-footer {
+    padding: 16px 24px;
+  }
+
+  .card-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .card-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
