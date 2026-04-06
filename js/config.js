@@ -4,7 +4,7 @@
 
 const CONFIG = {
   // ─── API ───
-  API_BASE: 'https://fitlife-backend-rrd9.onrender.com/api',
+  API_BASE: 'http://localhost:5000/api',
   // API_BASE: 'https://api.yourapp.com/api',  // production
 
   // ─── Storage Keys ───
