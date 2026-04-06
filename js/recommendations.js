@@ -1,167 +1,225 @@
-const RECOMMENDATION_DEFAULT_PROMPT = 'Return pure JSON with goal label, weekly_workout_plan, nutrition_tips, and motivational_tip for the selected goal.';
+// ──────────────────────────────────────────────────
+// recommendations.js — AI Diet & Workout Recommendations
+// ──────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (!getSelectedGoal()) {
-    setSelectedGoal('Fit');
-  }
-  initGoalSelector();
-  initRecommendationControls();
   loadRecommendations();
+  initRefresh();
 });
 
-function initGoalSelector() {
-  const container = document.getElementById('goal-selector');
-  if (!container) return;
-  const currentGoal = getSelectedGoal() || 'Fit';
-
-  container.innerHTML = CONFIG.GOAL_OPTIONS.map(goal => `
-    <label class="radio-card">
-      <input type="radio" name="goal-selector" value="${goal}" ${goal === currentGoal ? 'checked' : ''}>
-      <span class="radio-card-label">
-        <span class="radio-card-text">${goal}</span>
-        <span class="radio-card-sub">Generate a weekly plan</span>
-      </span>
-    </label>
-  `).join('');
-
-  container.querySelectorAll('input[name="goal-selector"]').forEach(input => {
-    input.addEventListener('change', () => {
-      setSelectedGoal(input.value);
+// ─── Refresh Button ──────────────────────────────
+function initRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
       loadRecommendations();
+      showToast('Refreshing recommendations...', 'info');
     });
-  });
-}
-
-function initRecommendationControls() {
-  document.getElementById('refresh-btn').addEventListener('click', () => loadRecommendations());
-  document.getElementById('edit-prompt-btn').addEventListener('click', openPromptModal);
-  document.getElementById('close-prompt-modal').addEventListener('click', closePromptModal);
-  document.getElementById('prompt-modal').addEventListener('click', event => {
-    if (event.target.id === 'prompt-modal') {
-      closePromptModal();
-    }
-  });
-  document.getElementById('regenerate-from-modal').addEventListener('click', () => {
-    setEditablePrompt(document.getElementById('prompt-textarea').value.trim());
-    closePromptModal();
-    loadRecommendations();
-  });
-}
-
-function openPromptModal() {
-  document.getElementById('prompt-textarea').value = getEditablePrompt(RECOMMENDATION_DEFAULT_PROMPT);
-  document.getElementById('prompt-modal').classList.add('active');
-}
-
-function closePromptModal() {
-  document.getElementById('prompt-modal').classList.remove('active');
-}
-
-async function loadRecommendations() {
-  const goal = getSelectedGoal() || 'Fit';
-  document.getElementById('recommendation-loading').style.display = 'block';
-
-  try {
-    const responseText = await requestGoalRecommendations(goal, getEditablePrompt(RECOMMENDATION_DEFAULT_PROMPT));
-    const parsed = safeParseJson(responseText);
-
-    if (!parsed) {
-      throw new Error('Could not parse workout recommendations.');
-    }
-
-    renderRecommendations(parsed);
-  } catch (err) {
-    showToast(err.message || 'Failed to load recommendations.', 'error');
-  } finally {
-    document.getElementById('recommendation-loading').style.display = 'none';
   }
 }
 
-async function requestGoalRecommendations(goal, prompt) {
-  const workoutFocus = {
-    Cut: ['Fat loss conditioning', 'Upper body circuit', 'Lower body burn', 'Core + cardio', 'Mobility + steps', 'Full body sweat', 'Recovery'],
-    Bulk: ['Chest + triceps', 'Back + biceps', 'Leg strength', 'Shoulders', 'Upper hypertrophy', 'Lower hypertrophy', 'Recovery'],
-    Fit: ['Full body', 'Cardio mix', 'Mobility', 'Strength balance', 'Core', 'Steady conditioning', 'Recovery'],
-    'Muscle Growth': ['Push day', 'Pull day', 'Leg day', 'Upper chest + arms', 'Back thickness', 'Glutes + hamstrings', 'Recovery'],
-  };
-
-  const nutritionTips = {
-    Cut: ['Keep protein high at every meal.', 'Build meals around vegetables and lean protein.', 'Stay in a moderate calorie deficit, not a crash diet.'],
-    Bulk: ['Use calorie-dense but clean foods to support growth.', 'Eat carbs around your training window.', 'Track protein daily and recover hard.'],
-    Fit: ['Balance carbs, protein, and fats across the day.', 'Hydrate consistently and keep meal timing regular.', 'Use weekends to prep simple meals.'],
-    'Muscle Growth': ['Push progressive overload and protein intake together.', 'Eat a recovery meal within 90 minutes after training.', 'Do not skip sleep if muscle gain is the goal.'],
-  };
-
-  const exercises = {
-    Cut: ['Incline walk', 'Kettlebell swings', 'Push-ups', 'Mountain climbers'],
-    Bulk: ['Bench press', 'Dumbbell row', 'Leg press', 'Overhead press'],
-    Fit: ['Squats', 'Push-ups', 'Plank', 'Bike intervals'],
-    'Muscle Growth': ['Barbell squat', 'Romanian deadlift', 'Pull-up', 'Incline dumbbell press'],
-  };
-
-  const weekly_workout_plan = workoutFocus[goal].map((focus, index) => ({
-    day: CONFIG.ENUMS.day_of_week[index],
-    focus_area: focus,
-    exercises: exercises[goal].map((exercise, exerciseIndex) => `${exercise} ${exerciseIndex + 1}`),
-  }));
-
-  return JSON.stringify({
-    goal_label: goal,
-    weekly_workout_plan,
-    nutrition_tips: nutritionTips[goal],
-    motivational_tip: `${goal} plan active. ${prompt ? 'Prompt updated for a more personalized recommendation.' : 'Stay consistent and keep momentum.'}`,
-  });
+// ─── Load Recommendations ────────────────────────
+async function loadRecommendations() {
+  try {
+    const data = await recommendAPI.get();
+    const r = data.recommendations;
+    renderBMIBanner(r);
+    renderDietPlan(r.diet_plan);
+    renderWorkoutPlan(r.workout_plan);
+    renderWeeklyTips(r.weekly_tips);
+    renderGeneratedAt(r.generated_at);
+  } catch (err) {
+    if (err.status === 404) {
+      showToast('Please complete your health profile first', 'warning');
+      setTimeout(() => window.location.href = 'profile.html', 1500);
+      return;
+    }
+    showToast('Failed to load recommendations', 'error');
+    console.error(err);
+  }
 }
 
-function renderRecommendations(data) {
-  document.getElementById('recommendation-goal-badge').textContent = data.goal_label || getSelectedGoal();
-  document.getElementById('goal-banner-title').textContent = `${data.goal_label || getSelectedGoal()} Mode`;
-  document.getElementById('goal-banner-tip').textContent = data.motivational_tip || 'Stay consistent this week.';
+// ─── BMI Banner ──────────────────────────────────
+function renderBMIBanner(r) {
+  const title = document.getElementById('bmi-cat-title');
+  const desc = document.getElementById('bmi-cat-desc');
+  const calTarget = document.getElementById('cal-target');
 
-  renderWorkoutCards(data.weekly_workout_plan || []);
-  renderNutritionTips(data.nutrition_tips || []);
+  if (title) title.textContent = `Body Category: ${r.bmi_category || 'Unknown'}`;
+  if (desc) desc.textContent = getBMICategoryDescription(r.bmi_category);
+  if (calTarget) calTarget.textContent = `${formatNumber(r.daily_calories || 0)} kcal/day`;
 }
 
-function renderWorkoutCards(plan) {
-  const container = document.getElementById('weekly-workout-cards');
-  if (!plan.length) {
-    container.innerHTML = '<div class="empty-state"><div class="empty-state-title">No workout plan available</div></div>';
+function getBMICategoryDescription(cat) {
+  const map = {
+    'Underweight': 'Focus on nutrient-dense meals to gain healthy weight',
+    'Normal': 'Great job! Maintain your balanced diet and active lifestyle',
+    'Overweight': 'Slight calorie deficit with regular exercise recommended',
+    'Obese': 'Consult a doctor and follow a structured plan for safe weight loss',
+  };
+  return map[cat] || 'Personalized recommendations based on your health profile';
+}
+
+// ─── Diet Plan ───────────────────────────────────
+function renderDietPlan(plan) {
+  const container = document.getElementById('diet-plan');
+  if (!container || !plan) return;
+
+  const meals = ['breakfast', 'morning_snack', 'lunch', 'afternoon_snack', 'dinner'];
+  const mealIcons = {
+    breakfast: '🌅',
+    morning_snack: '🍎',
+    lunch: '☀️',
+    afternoon_snack: '🥤',
+    dinner: '🌙',
+    snack: '🍎',
+  };
+  const mealLabels = {
+    breakfast: 'Breakfast',
+    morning_snack: 'Morning Snack',
+    lunch: 'Lunch',
+    afternoon_snack: 'Afternoon Snack',
+    dinner: 'Dinner',
+    snack: 'Snack',
+  };
+
+  let html = '<div class="diet-grid">';
+
+  // Handle both object and directly-keyed formats
+  for (const key of Object.keys(plan)) {
+    const item = plan[key];
+    const icon = mealIcons[key] || '🍽️';
+    const label = mealLabels[key] || formatEnumLabel(key);
+
+    // Handle structured { meal, kcal } or plain string
+    let mealName, kcal;
+    if (typeof item === 'object' && item !== null) {
+      mealName = item.meal || item.name || '';
+      kcal = item.kcal || item.calories || 0;
+    } else {
+      mealName = String(item);
+      // Try to extract kcal from string like "Oats with banana (400 kcal)"
+      const match = mealName.match(/\((\d+)\s*kcal\)/i);
+      kcal = match ? parseInt(match[1]) : 0;
+    }
+
+    html += `
+      <div class="diet-card card hover-lift">
+        <div class="card-body" style="padding: 20px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <span style="font-size: 1.5rem;">${icon}</span>
+            <div>
+              <div style="font-weight: 600; color: var(--text);">${label}</div>
+              ${kcal ? `<span class="badge badge-accent" style="margin-top: 4px;">${kcal} kcal</span>` : ''}
+            </div>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;">${escapeHtml(mealName)}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ─── Workout Plan ────────────────────────────────
+function renderWorkoutPlan(plan) {
+  const container = document.getElementById('workout-plan');
+  if (!container || !plan) return;
+
+  const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const todayDay = getDayName();
+
+  // Map day abbreviations
+  const dayMap = { Sun: 'Sun', Mon: 'Mon', Tue: 'Tue', Wed: 'Wed', Thu: 'Thu', Fri: 'Fri', Sat: 'Sat' };
+
+  let html = '<div class="workout-week-grid">';
+
+  for (const day of dayOrder) {
+    const exercises = plan[day] || [];
+    const isToday = todayDay === day;
+
+    html += `
+      <div class="workout-day-card card ${isToday ? 'card-today' : ''} hover-lift">
+        <div class="card-body" style="padding: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <span style="font-weight: 600; color: var(--text); font-size: 0.95rem;">${day}</span>
+            ${isToday ? '<span class="badge badge-accent">Today</span>' : ''}
+          </div>`;
+
+    if (exercises.length === 0) {
+      html += '<p class="text-muted" style="font-size: 0.85rem;">Rest Day 🧘</p>';
+    } else {
+      html += '<div class="exercise-list">';
+      for (const ex of exercises) {
+        // Handle structured { name, sets, reps, duration_min } or plain string
+        if (typeof ex === 'object') {
+          const name = ex.name || 'Exercise';
+          const details = [];
+          if (ex.sets) details.push(`${ex.sets} sets`);
+          if (ex.reps) details.push(`${ex.reps} reps`);
+          if (ex.duration_min) details.push(`${ex.duration_min} min`);
+          html += `
+            <div class="exercise-item">
+              <div style="font-size: 0.85rem; color: var(--text);">${escapeHtml(name)}</div>
+              ${details.length ? `<div style="font-size: 0.75rem; color: var(--text-muted);">${details.join(' · ')}</div>` : ''}
+            </div>`;
+        } else {
+          html += `
+            <div class="exercise-item">
+              <div style="font-size: 0.85rem; color: var(--text);">${escapeHtml(String(ex))}</div>
+            </div>`;
+        }
+      }
+      html += '</div>';
+    }
+
+    html += '</div></div>';
+  }
+
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// ─── Weekly Tips ─────────────────────────────────
+function renderWeeklyTips(tips) {
+  const container = document.getElementById('weekly-tips');
+  if (!container) return;
+
+  if (!tips || (Array.isArray(tips) && tips.length === 0)) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">💡</div>
+        <div class="empty-state-title">No tips available</div>
+        <p class="empty-state-text">Tips will appear once your profile is set up</p>
+      </div>`;
     return;
   }
 
-  container.innerHTML = `
-    <div class="card-grid card-grid-2">
-      ${plan.map(day => `
-        <div class="card hover-lift">
-          <div class="card-body">
-            <div style="display:flex; justify-content:space-between; gap:12px; align-items:center;">
-              <div style="font-weight:700; color:var(--text);">${escapeHtml(day.day)}</div>
-              <span class="badge badge-accent">${escapeHtml(day.focus_area)}</span>
-            </div>
-            <div class="mt-2 text-muted" style="font-size:0.85rem; line-height:1.7;">
-              ${day.exercises.map(exercise => `<div style="padding:8px 0; border-bottom:1px solid var(--border-light);">${escapeHtml(exercise)}</div>`).join('')}
-            </div>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
+  // Handle array of strings or single string
+  const tipsArr = Array.isArray(tips) ? tips : [tips];
 
-function renderNutritionTips(tips) {
-  const container = document.getElementById('nutrition-tips');
   container.innerHTML = `
     <div class="tips-grid">
-      ${tips.map(tip => `
-        <div class="tip-item">
-          <span class="tip-icon">Tip</span>
+      ${tipsArr.map((tip, i) => `
+        <div class="tip-item animate-fade-in-up" style="animation-delay: ${i * 0.1}s;">
+          <span class="tip-icon">💡</span>
           <span class="tip-text">${escapeHtml(tip)}</span>
         </div>
       `).join('')}
-    </div>
-  `;
+    </div>`;
 }
 
+// ─── Generated At ────────────────────────────────
+function renderGeneratedAt(ts) {
+  const el = document.getElementById('generated-at');
+  if (el && ts) {
+    el.textContent = `Recommendations generated on ${formatDate(ts)}`;
+  }
+}
+
+// ─── HTML Escape ─────────────────────────────────
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;

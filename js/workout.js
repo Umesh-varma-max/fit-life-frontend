@@ -1,699 +1,325 @@
-const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const TIMER_RING_CIRCUMFERENCE = 2 * Math.PI * 52;
+// workout.js - Goal-based weekly workout view with posture guidance
 
-const WORKOUT_LIBRARY = {
-  Cut: {
-    focus: 'Higher movement volume with short rest to support fat loss.',
-    split: ['Cardio Core', 'Lower Body HIIT', 'Upper Body Circuit', 'Mobility Flow', 'Conditioning', 'Glutes and Core', 'Recovery Walk'],
-  },
-  Bulk: {
-    focus: 'Strength-first split with extra volume and longer rest blocks.',
-    split: ['Chest and Triceps', 'Back and Biceps', 'Leg Power', 'Shoulders and Core', 'Full Body Volume', 'Posterior Chain', 'Recovery Mobility'],
-  },
-  Fit: {
-    focus: 'Balanced mix of endurance, strength, and mobility.',
-    split: ['Full Body Strength', 'Cardio Intervals', 'Lower Body Control', 'Upper Body Tone', 'Core and Mobility', 'Hybrid Conditioning', 'Recovery Stretch'],
-  },
-  'Muscle Growth': {
-    focus: 'Hypertrophy-focused sessions with steady tension and control.',
-    split: ['Push Hypertrophy', 'Pull Hypertrophy', 'Leg Hypertrophy', 'Core and Stability', 'Upper Body Pump', 'Glutes and Hamstrings', 'Mobility Recovery'],
-  },
-};
-
-const EXERCISE_LIBRARY = {
-  push: [
-    ['Push-Up', 'Chest', 'Keep your ribs tucked, shoulders away from ears, and lower in one straight line.'],
-    ['Incline Press', 'Chest', 'Press evenly, keep wrists stacked, and control the lowering phase.'],
-    ['Tricep Dip', 'Arms', 'Stay tall through the chest and bend only to a comfortable shoulder range.'],
-    ['Shoulder Press', 'Shoulders', 'Brace your core and press straight overhead without arching your lower back.'],
-  ],
-  pull: [
-    ['Bent-Over Row', 'Back', 'Hinge from the hips, keep your spine neutral, and pull elbows toward your ribs.'],
-    ['Resistance Row', 'Back', 'Lead with the elbows and squeeze your shoulder blades at the back.'],
-    ['Bicep Curl', 'Arms', 'Keep elbows close to your sides and avoid swinging the weight.'],
-    ['Deadlift Reach', 'Back', 'Drive through your heels and keep the bar path close to the body.'],
-  ],
-  lower: [
-    ['Bodyweight Squat', 'Legs', 'Sit back into your hips, keep your heels planted, and drive up through midfoot.'],
-    ['Reverse Lunge', 'Legs', 'Step back softly and keep your front knee tracking over the toes.'],
-    ['Glute Bridge', 'Glutes', 'Lift through the hips while keeping your ribs down and knees steady.'],
-    ['Step-Up', 'Legs', 'Push through the lead leg and keep your torso tall at the top.'],
-  ],
-  core: [
-    ['Forearm Plank', 'Core', 'Brace your abs, squeeze glutes, and keep your neck in line with the spine.'],
-    ['Dead Bug', 'Core', 'Press your lower back into the floor as opposite limbs extend slowly.'],
-    ['Mountain Climber', 'Core', 'Drive knees under the body without letting your hips bounce high.'],
-    ['Russian Twist', 'Core', 'Rotate from the torso, not just the arms, and keep your chest lifted.'],
-  ],
-  cardio: [
-    ['Jumping Jacks', 'Cardio', 'Stay light on your feet and keep a steady rhythm with soft knees.'],
-    ['High Knees', 'Cardio', 'Stay tall, pump your arms, and land softly under your center of mass.'],
-    ['Skater Hop', 'Cardio', 'Push side to side with control and let the landing leg absorb the load.'],
-    ['Fast Feet', 'Cardio', 'Keep your chest up and move quickly with short, sharp ground contacts.'],
-  ],
-  mobility: [
-    ['World Stretch', 'Mobility', 'Open the chest, keep hips square, and move through each rep with control.'],
-    ['Cat-Cow Flow', 'Mobility', 'Move one segment at a time through the spine and match the breath.'],
-    ['Hip Opener', 'Mobility', 'Stay upright and sink only as far as you can maintain a neutral pelvis.'],
-    ['Thoracic Reach', 'Mobility', 'Rotate through the upper back while keeping the hips and knees steady.'],
-  ],
-};
-
-let workoutState = {
-  goal: getSelectedGoal() || 'Fit',
-  plan: [],
-  todayPlan: null,
-  currentIndex: 0,
-  phase: 'idle',
-  timerId: null,
-  remainingSeconds: 0,
-  phaseDuration: 0,
-  totalElapsedSeconds: 0,
-  completedExercises: [],
-  startedAt: null,
-  isPaused: false,
-  hasLoggedSession: false,
-};
+let exercises = [];
+let completedCount = 0;
+let timerInterval = null;
+let timerSeconds = 0;
+let currentExerciseName = '';
 
 document.addEventListener('DOMContentLoaded', () => {
-  initGoalSelector();
-  initWorkoutControls();
-  loadWorkoutExperience();
+  loadWorkoutPlan();
+  initTimer();
 });
 
-function initGoalSelector() {
-  const container = document.getElementById('workout-goal-selector');
+async function loadWorkoutPlan() {
+  try {
+    const data = await workoutAPI.getPlan();
+    const plans = data.plan || [];
+    const today = getDayName();
+
+    renderWeeklySummary(data);
+    renderWeeklyPlan(plans);
+
+    const todayPlan = plans.find(plan => plan.day === today);
+    if (todayPlan && todayPlan.exercises && todayPlan.exercises.length > 0) {
+      exercises = todayPlan.exercises;
+      renderExercises(todayPlan);
+      updateSessionProgress();
+    } else {
+      showRestDay();
+    }
+  } catch (err) {
+    if (err.status === 404) {
+      showRestDay();
+      return;
+    }
+    console.error('Failed to load workout plan:', err);
+    showEmptyState('exercises-container', 'Workout', 'Failed to load', 'Could not fetch your workout plan');
+  }
+}
+
+function renderWeeklySummary(data) {
+  const goal = document.getElementById('workout-goal');
+  const duration = document.getElementById('weekly-duration');
+  const burn = document.getElementById('weekly-burn');
+  const days = document.getElementById('weekly-days');
+  const source = document.getElementById('weekly-plan-source');
+
+  if (goal) goal.textContent = formatEnumLabel(data.goal || data.template_key || data.source || 'plan');
+  if (duration) duration.textContent = `${data.total_duration_min || 0} min`;
+  if (burn) burn.textContent = `${data.total_estimated_calories_burn || 0} kcal`;
+  if (days) days.textContent = `${data.active_days || 0} / ${data.total_days || 7}`;
+  if (source) source.textContent = data.source === 'custom' ? 'Custom Plan' : 'Goal Plan';
+}
+
+function renderExercises(todayPlan) {
+  const container = document.getElementById('exercises-container');
   if (!container) return;
 
-  container.innerHTML = CONFIG.GOAL_OPTIONS.map(goal => `
-    <button class="goal-card ${goal === workoutState.goal ? 'active' : ''}" type="button" data-goal="${escapeHtml(goal)}">
-      <span class="goal-card-title">${escapeHtml(goal)}</span>
-      <span class="goal-card-sub">${escapeHtml(WORKOUT_LIBRARY[goal].focus)}</span>
-    </button>
-  `).join('');
+  container.innerHTML = `
+    <div class="card mb-3 animate-fade-in-up">
+      <div class="card-body" style="display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center;">
+        <div>
+          <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${escapeHtml(todayPlan.plan_name || "Today's Workout")}</div>
+          <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${todayPlan.exercises.length} exercises · ${todayPlan.total_duration_min || 0} min · ${todayPlan.total_estimated_calories_burn || 0} kcal burn</div>
+        </div>
+        <span class="badge badge-accent">Today</span>
+      </div>
+    </div>
+    ${exercises.map((exercise, index) => renderExerciseCard(exercise, index)).join('')}
+  `;
 
-  container.querySelectorAll('[data-goal]').forEach(button => {
-    button.addEventListener('click', () => {
-      workoutState.goal = button.dataset.goal;
-      setSelectedGoal(workoutState.goal);
-      initGoalSelector();
-      loadWorkoutExperience(true);
+  container.querySelectorAll('.start-timer-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      startExerciseTimer(btn.dataset.name);
+    });
+  });
+
+  container.querySelectorAll('.complete-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      completeExercise(parseInt(btn.dataset.index, 10), btn.dataset.name, parseInt(btn.dataset.duration, 10) || 0);
     });
   });
 }
 
-function initWorkoutControls() {
-  const startBtn = document.getElementById('control-start');
-  const pauseBtn = document.getElementById('control-pause');
-  const skipBtn = document.getElementById('control-skip');
-  const endBtn = document.getElementById('control-end');
-  const refreshBtn = document.getElementById('regenerate-workout-btn');
-  const restartBtn = document.getElementById('restart-session-btn');
+function renderExerciseCard(exercise, index) {
+  const details = [];
+  if (exercise.sets) details.push(`${exercise.sets} sets`);
+  if (exercise.reps) details.push(`${exercise.reps} reps`);
+  details.push(`${exercise.estimated_duration_min || exercise.duration_min || 0} min`);
+  details.push(`${exercise.estimated_calories_burn || 0} kcal`);
 
-  if (startBtn) startBtn.addEventListener('click', handleStartPauseResume);
-  if (pauseBtn) pauseBtn.addEventListener('click', pauseTimer);
-  if (skipBtn) skipBtn.addEventListener('click', skipCurrentPhase);
-  if (endBtn) endBtn.addEventListener('click', finishWorkoutSession);
-  if (refreshBtn) refreshBtn.addEventListener('click', () => loadWorkoutExperience(true));
-  if (restartBtn) restartBtn.addEventListener('click', () => loadWorkoutExperience(true));
+  return `
+    <div class="card mb-2 hover-lift animate-fade-in-up exercise-card" id="ex-card-${index}" style="animation-delay: ${index * 0.08}s;">
+      <div class="card-body" style="display: flex; align-items: stretch; gap: 16px; padding: 20px 24px; flex-wrap: wrap;">
+        <div class="exercise-check" id="ex-check-${index}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; transition: var(--transition);"></div>
+        <div style="width: 120px; min-height: 120px; border-radius: 18px; border: 1px solid var(--border); background: linear-gradient(180deg, rgba(0,212,170,0.12), rgba(0,180,216,0.04)); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          ${getWorkoutPoseMarkup(exercise.name)}
+        </div>
+        <div style="flex: 1; min-width: 260px;">
+          <div style="font-weight: 700; color: var(--text); font-size: 1rem;">${escapeHtml(exercise.name || 'Exercise')}</div>
+          <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${details.join(' · ')}</div>
+          <div style="margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border);">
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Posture</div>
+            <div style="font-weight: 600; color: var(--text);">${escapeHtml(exercise.posture || 'Controlled neutral posture')}</div>
+            <div class="text-muted" style="font-size: 0.85rem; margin-top: 8px; line-height: 1.55;">${Array.isArray(exercise.posture_cues) ? exercise.posture_cues.map(escapeHtml).join(' ') : ''}</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: flex-start;">
+          <button class="btn btn-outline btn-sm start-timer-btn" data-index="${index}" data-name="${escapeHtml(exercise.name || 'Exercise')}">Timer</button>
+          <button class="btn btn-primary btn-sm complete-btn" data-index="${index}" data-name="${escapeHtml(exercise.name || 'Exercise')}" data-duration="${exercise.duration_min || exercise.estimated_duration_min || 0}">Done</button>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
-async function loadWorkoutExperience(showToastMessage = false) {
-  setWorkoutLoading(true);
-  clearWorkoutError();
-  resetSessionState();
+function renderWeeklyPlan(plans) {
+  const container = document.getElementById('weekly-plan-container');
+  if (!container) return;
+
+  container.innerHTML = plans.map((plan, index) => `
+    <div class="card mb-2 hover-lift animate-fade-in-up" style="animation-delay: ${index * 0.05}s;">
+      <div class="card-body" style="padding: 20px;">
+        <div style="display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 16px;">
+          <div>
+            <div style="font-size: 1.05rem; font-weight: 700; color: var(--text);">${escapeHtml(plan.day)} · ${escapeHtml(plan.plan_name || `${plan.day} Workout`)}</div>
+            <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${plan.exercises.length} exercises · ${plan.total_duration_min || 0} min · ${plan.total_estimated_calories_burn || 0} kcal burn</div>
+          </div>
+          <span class="badge ${plan.day === getDayName() ? 'badge-accent' : 'badge-outline'}">${plan.day === getDayName() ? 'Today' : 'Planned'}</span>
+        </div>
+        <div style="display: grid; gap: 12px;">
+          ${plan.exercises.map(exercise => `
+            <div style="display: grid; grid-template-columns: 108px 1fr; gap: 14px; padding: 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface-2);">
+              <div style="border-radius: 14px; background: linear-gradient(180deg, rgba(0,212,170,0.14), rgba(0,180,216,0.05)); display: flex; align-items: center; justify-content: center; min-height: 108px;">
+                ${getWorkoutPoseMarkup(exercise.name)}
+              </div>
+              <div>
+                <div style="font-weight: 700; color: var(--text);">${escapeHtml(exercise.name)}</div>
+                <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${buildExerciseMeta(exercise)}</div>
+                <div style="margin-top: 10px; font-size: 0.9rem; color: var(--text);">${escapeHtml(exercise.posture || 'Controlled neutral posture')}</div>
+                <div class="text-muted" style="margin-top: 6px; line-height: 1.55; font-size: 0.85rem;">${Array.isArray(exercise.posture_cues) ? exercise.posture_cues.map(escapeHtml).join(' ') : ''}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function buildExerciseMeta(exercise) {
+  const parts = [];
+  if (exercise.sets) parts.push(`${exercise.sets} sets`);
+  if (exercise.reps) parts.push(`${exercise.reps} reps`);
+  parts.push(`${exercise.estimated_duration_min || exercise.duration_min || 0} min`);
+  parts.push(`${exercise.estimated_calories_burn || 0} kcal`);
+  return parts.join(' · ');
+}
+
+async function completeExercise(index, name, durationMin) {
+  const card = document.getElementById(`ex-card-${index}`);
+  const check = document.getElementById(`ex-check-${index}`);
+
+  if (card && card.classList.contains('completed')) return;
+
+  if (check) {
+    check.style.background = 'var(--accent)';
+    check.style.borderColor = 'var(--accent)';
+    check.innerHTML = '✓';
+    check.style.color = '#fff';
+  }
+  if (card) {
+    card.classList.add('completed');
+    card.style.opacity = '0.72';
+  }
+
+  completedCount++;
+  updateSessionProgress();
 
   try {
-    const prompt = buildWorkoutPrompt(workoutState.goal);
-    const rawResponse = await requestWorkoutPlan(workoutState.goal, prompt);
-    const parsed = safeParseJson(rawResponse);
-
-    if (!parsed || !Array.isArray(parsed.weekly_plan) || parsed.weekly_plan.length === 0) {
-      throw new Error('Workout plan response was empty.');
-    }
-
-    workoutState.plan = parsed.weekly_plan;
-    workoutState.todayPlan = getTodayPlan(parsed.weekly_plan);
-
-    renderWorkoutOverview(parsed);
-    renderTodayPlan();
-    renderWeeklyPlan();
-    renderCurrentExercise();
-    setWorkoutLoading(false);
-
-    if (showToastMessage) {
-      showToast(`Updated ${workoutState.goal} workout plan`, 'success');
-    }
-  } catch (error) {
-    console.error('Workout load failed:', error);
-    showWorkoutError(error.message || 'Unable to generate workout plan.');
-    setWorkoutLoading(false);
-  }
-}
-
-function setWorkoutLoading(isLoading) {
-  const loading = document.getElementById('workout-loading');
-  const session = document.getElementById('workout-session');
-  const summary = document.getElementById('workout-summary-card');
-
-  if (loading) loading.classList.toggle('hidden', !isLoading);
-  if (session) session.classList.toggle('hidden', isLoading);
-  if (summary && isLoading) summary.classList.add('hidden');
-}
-
-function showWorkoutError(message) {
-  const errorCard = document.getElementById('workout-error');
-  const errorText = document.getElementById('workout-error-text');
-  const session = document.getElementById('workout-session');
-
-  if (errorCard) errorCard.classList.remove('hidden');
-  if (errorText) errorText.textContent = message;
-  if (session) session.classList.add('hidden');
-}
-
-function clearWorkoutError() {
-  const errorCard = document.getElementById('workout-error');
-  if (errorCard) errorCard.classList.add('hidden');
-}
-
-function resetSessionState() {
-  stopTimer();
-  workoutState.currentIndex = 0;
-  workoutState.phase = 'idle';
-  workoutState.remainingSeconds = 0;
-  workoutState.phaseDuration = 0;
-  workoutState.totalElapsedSeconds = 0;
-  workoutState.completedExercises = [];
-  workoutState.startedAt = null;
-  workoutState.isPaused = false;
-  workoutState.hasLoggedSession = false;
-  toggleSummary(false);
-  updateControls();
-  updateTimerUi(0, 1, 'Ready', 'Start when you are ready');
-}
-
-function renderWorkoutOverview(parsed) {
-  const today = workoutState.todayPlan;
-  const totalSeconds = workoutState.plan.reduce((sum, day) => sum + (day.total_duration_seconds || 0), 0);
-  const totalCalories = workoutState.plan.reduce((sum, day) => sum + (day.estimated_calories_burn || 0), 0);
-
-  setText('overview-goal', parsed.goal_label || workoutState.goal);
-  setText('overview-focus', WORKOUT_LIBRARY[workoutState.goal].focus);
-  setText('overview-days', String(workoutState.plan.length));
-  setText('overview-minutes', `${Math.round(totalSeconds / 60)} min`);
-  setText('overview-calories', `${totalCalories} kcal`);
-  setText('goal-day-label', today ? today.day : 'Today');
-  setText('workout-plan-status', 'Ready');
-  setText('weekly-plan-count', `${workoutState.plan.length} days`);
-}
-
-function renderTodayPlan() {
-  const todayPlan = workoutState.todayPlan;
-  const list = document.getElementById('today-plan-list');
-
-  if (!todayPlan || !list) return;
-
-  setText('today-plan-title', `${todayPlan.day} - ${todayPlan.focus_area}`);
-  setText('today-plan-summary', todayPlan.summary);
-  setText('today-plan-duration', `${Math.round(todayPlan.total_duration_seconds / 60)} min`);
-  setText('today-plan-burn', `${todayPlan.estimated_calories_burn} kcal`);
-
-  list.innerHTML = todayPlan.exercises.map((exercise, index) => `
-    <article class="exercise-list-card ${index === workoutState.currentIndex ? 'active' : ''} ${workoutState.completedExercises.includes(index) ? 'done' : ''}">
-      <div class="exercise-list-index">${index + 1}</div>
-      <div class="exercise-list-content">
-        <div class="exercise-list-top">
-          <strong>${escapeHtml(exercise.exercise_name)}</strong>
-          <span class="badge badge-info">${escapeHtml(exercise.muscle_group)}</span>
-        </div>
-        <p>${escapeHtml(exercise.description)}</p>
-        <div class="exercise-inline-meta">
-          <span>${exercise.sets} sets</span>
-          <span>${exercise.reps} reps</span>
-          <span>${exercise.duration_seconds}s work</span>
-          <span>${exercise.rest_duration_seconds}s rest</span>
-          <span>${exercise.estimated_calories_burn} kcal</span>
-        </div>
-      </div>
-    </article>
-  `).join('');
-
-  updateSessionProgress();
-}
-
-function renderWeeklyPlan() {
-  const grid = document.getElementById('weekly-workout-grid');
-  if (!grid) return;
-
-  grid.innerHTML = workoutState.plan.map(day => `
-    <article class="weekly-day-card ${day.day === getDayName() ? 'today' : ''}">
-      <div class="weekly-day-head">
-        <div>
-          <h4>${escapeHtml(day.day)}</h4>
-          <p>${escapeHtml(day.focus_area)}</p>
-        </div>
-        <span class="badge ${day.day === getDayName() ? 'badge-accent' : 'badge-info'}">${day.day === getDayName() ? 'Today' : 'Planned'}</span>
-      </div>
-      <div class="exercise-inline-meta">
-        <span>${Math.round(day.total_duration_seconds / 60)} min</span>
-        <span>${day.estimated_calories_burn} kcal</span>
-      </div>
-      <div class="weekly-exercise-stack">
-        ${day.exercises.map(exercise => `
-          <div class="weekly-exercise-item">
-            <div class="mini-animation ${escapeHtml(exercise.animation)}">${getExerciseAnimationMarkup(exercise.animation)}</div>
-            <div>
-              <strong>${escapeHtml(exercise.exercise_name)}</strong>
-              <p>${escapeHtml(exercise.description)}</p>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </article>
-  `).join('');
-}
-
-function renderCurrentExercise() {
-  const todayPlan = workoutState.todayPlan;
-  if (!todayPlan || !todayPlan.exercises.length) return;
-
-  const exercise = todayPlan.exercises[workoutState.currentIndex];
-  if (!exercise) return;
-
-  setText('exercise-muscle-group', exercise.muscle_group);
-  setText('exercise-name', exercise.exercise_name);
-  setText('exercise-description', exercise.description);
-  setText('exercise-sets', String(exercise.sets));
-  setText('exercise-reps', String(exercise.reps));
-  setText('exercise-duration', `${exercise.duration_seconds}s`);
-  setText('exercise-rest', `${exercise.rest_duration_seconds}s`);
-  setText('session-badge', workoutState.phase === 'rest' ? 'Rest' : workoutState.phase === 'exercise' ? 'Training' : 'Ready');
-
-  const animation = document.getElementById('exercise-animation');
-  if (animation) {
-    animation.className = `exercise-hero animation-${exercise.animation}`;
-    animation.innerHTML = getExerciseAnimationMarkup(exercise.animation);
+    await workoutAPI.logTimer({
+      exercise_name: name,
+      duration_seconds: (durationMin || 1) * 60,
+      log_date: todayDate(),
+    });
+  } catch (err) {
+    console.error('Failed to log exercise:', err);
   }
 
-  renderTodayPlan();
+  showToast(`${name} completed`, 'success');
+
+  if (completedCount >= exercises.length) {
+    document.getElementById('finish-workout-btn').style.display = 'inline-flex';
+  }
 }
 
 function updateSessionProgress() {
-  const total = workoutState.todayPlan ? workoutState.todayPlan.exercises.length : 0;
-  const done = workoutState.completedExercises.length;
-  const percent = total ? Math.round((done / total) * 100) : 0;
+  const total = exercises.length;
+  const progress = document.getElementById('session-progress');
+  const bar = document.getElementById('session-bar');
+  const finishBtn = document.getElementById('finish-workout-btn');
 
-  setText('session-progress-text', `${done} / ${total}`);
-  const progressBar = document.getElementById('session-progress-bar');
-  if (progressBar) progressBar.style.width = `${percent}%`;
-}
-
-function handleStartPauseResume() {
-  if (!workoutState.todayPlan || !workoutState.todayPlan.exercises.length) {
-    showToast('No exercises available for today', 'warning');
-    return;
-  }
-
-  if (workoutState.phase === 'idle') {
-    startExercisePhase();
-    return;
-  }
-
-  if (workoutState.isPaused) {
-    workoutState.isPaused = false;
-    startTimerLoop();
-    updateControls();
+  if (progress) progress.textContent = `${completedCount} / ${total}`;
+  if (bar) bar.style.width = `${percentage(completedCount, total)}%`;
+  if (finishBtn) {
+    finishBtn.style.display = completedCount > 0 ? 'inline-flex' : 'none';
+    finishBtn.onclick = () => {
+      showToast('Workout session complete! Great job!', 'success');
+      setTimeout(() => {
+        window.location.href = 'dashboard.html';
+      }, 1200);
+    };
   }
 }
 
-function startExercisePhase() {
-  const exercise = getCurrentExercise();
-  if (!exercise) {
-    finishWorkoutSession();
-    return;
-  }
+function initTimer() {
+  const startBtn = document.getElementById('timer-start');
+  const pauseBtn = document.getElementById('timer-pause');
+  const resetBtn = document.getElementById('timer-reset');
+  const doneBtn = document.getElementById('timer-done');
 
-  if (!workoutState.startedAt) {
-    workoutState.startedAt = new Date().toISOString();
-  }
+  startBtn.addEventListener('click', () => {
+    startBtn.style.display = 'none';
+    pauseBtn.style.display = 'inline-flex';
+    timerInterval = setInterval(tickTimer, 1000);
+  });
 
-  workoutState.phase = 'exercise';
-  workoutState.phaseDuration = exercise.duration_seconds;
-  workoutState.remainingSeconds = exercise.duration_seconds;
-  workoutState.isPaused = false;
+  pauseBtn.addEventListener('click', () => {
+    clearInterval(timerInterval);
+    pauseBtn.style.display = 'none';
+    startBtn.style.display = 'inline-flex';
+    startBtn.textContent = 'Resume';
+  });
 
-  renderCurrentExercise();
-  updateTimerUi(workoutState.remainingSeconds, workoutState.phaseDuration, 'Exercise', `${exercise.exercise_name} in progress`);
-  updateControls();
-  startTimerLoop();
-}
+  resetBtn.addEventListener('click', () => {
+    clearInterval(timerInterval);
+    timerSeconds = 0;
+    updateTimerDisplay();
+    pauseBtn.style.display = 'none';
+    startBtn.style.display = 'inline-flex';
+    startBtn.textContent = 'Start';
+  });
 
-function startRestPhase() {
-  const exercise = getCurrentExercise();
-  if (!exercise) {
-    finishWorkoutSession();
-    return;
-  }
+  doneBtn.addEventListener('click', () => {
+    clearInterval(timerInterval);
+    document.getElementById('timer-card').style.display = 'none';
 
-  workoutState.phase = 'rest';
-  workoutState.phaseDuration = exercise.rest_duration_seconds;
-  workoutState.remainingSeconds = exercise.rest_duration_seconds;
-  workoutState.isPaused = false;
-
-  renderCurrentExercise();
-  updateTimerUi(workoutState.remainingSeconds, workoutState.phaseDuration, 'Rest', 'Recover before the next movement');
-  updateControls();
-  startTimerLoop();
-}
-
-function pauseTimer() {
-  if (!workoutState.timerId) return;
-  stopTimer();
-  workoutState.isPaused = true;
-  updateControls();
-}
-
-function skipCurrentPhase() {
-  if (workoutState.phase === 'exercise') {
-    completeCurrentExercise();
-    return;
-  }
-
-  if (workoutState.phase === 'rest') {
-    advanceToNextExercise();
-    return;
-  }
-
-  handleStartPauseResume();
-}
-
-function startTimerLoop() {
-  stopTimer();
-
-  workoutState.timerId = window.setInterval(() => {
-    if (workoutState.remainingSeconds > 0) {
-      workoutState.remainingSeconds -= 1;
-      workoutState.totalElapsedSeconds += 1;
-      updateTimerUi(
-        workoutState.remainingSeconds,
-        workoutState.phaseDuration,
-        workoutState.phase === 'rest' ? 'Rest' : 'Exercise',
-        workoutState.phase === 'rest' ? 'Catch your breath' : `${getCurrentExercise().exercise_name} in progress`
-      );
-      return;
-    }
-
-    playCompletionTone();
-    if (workoutState.phase === 'exercise') {
-      completeCurrentExercise();
-    } else {
-      advanceToNextExercise();
-    }
-  }, 1000);
-}
-
-function stopTimer() {
-  if (workoutState.timerId) {
-    clearInterval(workoutState.timerId);
-    workoutState.timerId = null;
-  }
-}
-
-function completeCurrentExercise() {
-  stopTimer();
-  const exercise = getCurrentExercise();
-  if (!exercise) {
-    finishWorkoutSession();
-    return;
-  }
-
-  if (!workoutState.completedExercises.includes(workoutState.currentIndex)) {
-    workoutState.completedExercises.push(workoutState.currentIndex);
-  }
-
-  renderTodayPlan();
-  updateSessionProgress();
-
-  if (exercise.rest_duration_seconds > 0 && workoutState.currentIndex < workoutState.todayPlan.exercises.length - 1) {
-    startRestPhase();
-  } else {
-    advanceToNextExercise();
-  }
-}
-
-function advanceToNextExercise() {
-  stopTimer();
-  workoutState.currentIndex += 1;
-
-  if (!workoutState.todayPlan || workoutState.currentIndex >= workoutState.todayPlan.exercises.length) {
-    finishWorkoutSession();
-    return;
-  }
-
-  workoutState.phase = 'idle';
-  workoutState.remainingSeconds = 0;
-  workoutState.phaseDuration = 1;
-  workoutState.isPaused = false;
-  renderCurrentExercise();
-  updateTimerUi(0, 1, 'Ready', 'Tap start for the next exercise');
-  updateControls();
-}
-
-function finishWorkoutSession() {
-  stopTimer();
-
-  if (!workoutState.todayPlan) return;
-
-  if (workoutState.hasLoggedSession) {
-    toggleSummary(true);
-    return;
-  }
-
-  const completedItems = workoutState.todayPlan.exercises.filter((_, index) => workoutState.completedExercises.includes(index));
-  if (completedItems.length === 0) {
-    showToast('Start the session to log your workout', 'warning');
-    updateControls();
-    return;
-  }
-
-  const logs = readStorageJson(CONFIG.WORKOUT_LOG_KEY, []);
-  const timestamp = new Date().toISOString();
-  const date = todayDate();
-
-  completedItems.forEach(exercise => {
-    logs.unshift({
-      id: `${date}-${exercise.exercise_name}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-      type: 'workout',
-      exercise_name: exercise.exercise_name,
-      sets: exercise.sets,
-      reps: exercise.reps,
-      duration_seconds: exercise.duration_seconds,
-      estimated_calories_burn: exercise.estimated_calories_burn,
-      goal: workoutState.goal,
-      muscle_group: exercise.muscle_group,
-      date,
-      timestamp,
+    const index = exercises.findIndex(exercise => {
+      const exerciseName = typeof exercise === 'object' ? exercise.name : String(exercise);
+      return exerciseName === currentExerciseName;
     });
-  });
 
-  writeStorageJson(CONFIG.WORKOUT_LOG_KEY, logs);
-  workoutState.hasLoggedSession = true;
+    if (index >= 0) {
+      const duration = exercises[index].duration_min || exercises[index].estimated_duration_min || Math.ceil(timerSeconds / 60);
+      completeExercise(index, currentExerciseName, duration);
+    }
 
-  setText('summary-time', `${Math.max(1, Math.round(workoutState.totalElapsedSeconds / 60))} min`);
-  setText('summary-exercises', String(completedItems.length));
-  setText('summary-burn', `${completedItems.reduce((sum, item) => sum + item.estimated_calories_burn, 0)} kcal`);
-  toggleSummary(true);
-  showToast('Workout logged to Activity Tracker', 'success');
-
-  workoutState.phase = 'complete';
-  updateControls();
-}
-
-function toggleSummary(show) {
-  const summary = document.getElementById('workout-summary-card');
-  if (summary) summary.classList.toggle('hidden', !show);
-}
-
-function updateControls() {
-  const startBtn = document.getElementById('control-start');
-  const pauseBtn = document.getElementById('control-pause');
-  const skipBtn = document.getElementById('control-skip');
-  const endBtn = document.getElementById('control-end');
-
-  if (!startBtn || !pauseBtn || !skipBtn || !endBtn) return;
-
-  startBtn.textContent = workoutState.phase === 'idle' ? 'Start' : workoutState.isPaused ? 'Resume' : 'Running';
-  startBtn.disabled = workoutState.phase === 'exercise' && !workoutState.isPaused;
-  pauseBtn.disabled = !(workoutState.phase === 'exercise' || workoutState.phase === 'rest') || workoutState.isPaused;
-  skipBtn.disabled = workoutState.phase === 'complete';
-  endBtn.disabled = workoutState.phase === 'idle' && workoutState.completedExercises.length === 0;
-}
-
-function updateTimerUi(remaining, total, phaseLabel, caption) {
-  const safeTotal = total || 1;
-  const progress = Math.max(0, Math.min(1, remaining / safeTotal));
-  const strokeOffset = TIMER_RING_CIRCUMFERENCE * progress;
-  const ring = document.getElementById('timer-ring-progress');
-
-  if (ring) {
-    ring.style.strokeDasharray = `${TIMER_RING_CIRCUMFERENCE}`;
-    ring.style.strokeDashoffset = `${strokeOffset}`;
-  }
-
-  setText('timer-phase', phaseLabel);
-  setText('timer-value', formatDuration(remaining));
-  setText('timer-caption', caption);
-  setText('rest-chip', `Rest: ${getCurrentExercise() ? getCurrentExercise().rest_duration_seconds : 0}s`);
-}
-
-function getCurrentExercise() {
-  if (!workoutState.todayPlan) return null;
-  return workoutState.todayPlan.exercises[workoutState.currentIndex] || null;
-}
-
-async function requestWorkoutPlan(goal, prompt) {
-  const library = buildGoalWorkoutPlan(goal, prompt);
-  return JSON.stringify(library);
-}
-
-function buildGoalWorkoutPlan(goal, prompt) {
-  const goalConfig = WORKOUT_LIBRARY[goal] || WORKOUT_LIBRARY.Fit;
-  const weeklyPlan = WEEK_DAYS.map((day, index) => {
-    const focusArea = goalConfig.split[index];
-    const exercises = buildExercisesForFocus(goal, focusArea, index);
-    const totalDurationSeconds = exercises.reduce((sum, exercise) => sum + exercise.duration_seconds + exercise.rest_duration_seconds, 0);
-    const estimatedCaloriesBurn = exercises.reduce((sum, exercise) => sum + exercise.estimated_calories_burn, 0);
-
-    return {
-      day,
-      focus_area: focusArea,
-      summary: `Structured ${goal.toLowerCase()} session for ${focusArea.toLowerCase()} with guided rest and posture cues.`,
-      total_duration_seconds: totalDurationSeconds,
-      estimated_calories_burn: estimatedCaloriesBurn,
-      exercises,
-    };
-  });
-
-  return {
-    goal_label: goal,
-    prompt_used: prompt,
-    weekly_plan: weeklyPlan,
-  };
-}
-
-function buildExercisesForFocus(goal, focusArea, dayIndex) {
-  const lowered = focusArea.toLowerCase();
-  const buckets = [];
-
-  if (/push|chest|triceps|upper/.test(lowered)) buckets.push('push');
-  if (/pull|back|biceps|posterior/.test(lowered)) buckets.push('pull');
-  if (/leg|glute|lower/.test(lowered)) buckets.push('lower');
-  if (/core|stability/.test(lowered)) buckets.push('core');
-  if (/cardio|conditioning|hiit|walk/.test(lowered)) buckets.push('cardio');
-  if (/mobility|recovery|stretch/.test(lowered)) buckets.push('mobility');
-  if (buckets.length === 0) buckets.push('push', 'lower', 'core');
-
-  const durationBase = goal === 'Cut' ? 40 : goal === 'Bulk' ? 55 : goal === 'Muscle Growth' ? 50 : 45;
-  const restBase = goal === 'Cut' ? 20 : goal === 'Bulk' ? 45 : goal === 'Muscle Growth' ? 35 : 25;
-  const setBase = goal === 'Bulk' || goal === 'Muscle Growth' ? 4 : 3;
-
-  return buckets.map((bucket, idx) => {
-    const pool = EXERCISE_LIBRARY[bucket];
-    const item = pool[(dayIndex + idx) % pool.length];
-    const duration = durationBase + idx * 10;
-    const rest = restBase + idx * 5;
-    const calories = Math.round(duration / 6) + (bucket === 'cardio' ? 10 : bucket === 'lower' ? 8 : 5);
-
-    return {
-      exercise_name: item[0],
-      sets: setBase,
-      reps: bucket === 'mobility' ? 8 : bucket === 'cardio' ? 20 : 12,
-      duration_seconds: duration,
-      rest_duration_seconds: rest,
-      muscle_group: item[1],
-      description: item[2],
-      estimated_calories_burn: calories,
-      animation: mapBucketToAnimation(bucket),
-    };
+    timerSeconds = 0;
+    updateTimerDisplay();
   });
 }
 
-function mapBucketToAnimation(bucket) {
-  const map = {
-    push: 'push',
-    pull: 'pull',
-    lower: 'squat',
-    core: 'plank',
-    cardio: 'jump',
-    mobility: 'stretch',
-  };
-  return map[bucket] || 'stretch';
+function startExerciseTimer(name) {
+  currentExerciseName = name;
+  document.getElementById('timer-card').style.display = 'block';
+  document.getElementById('timer-exercise-name').textContent = name;
+  timerSeconds = 0;
+  updateTimerDisplay();
+  document.getElementById('timer-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-function buildWorkoutPrompt(goal) {
-  return [
-    `Generate a ${goal} daily workout plan as JSON only.`,
-    'Each exercise must include exercise_name, sets, reps, duration_seconds, rest_duration_seconds, muscle_group, description, and estimated_calories_burn.',
-    'Return a 7-day weekly_plan with focus_area and summary for each day.',
-  ].join(' ');
+function tickTimer() {
+  timerSeconds++;
+  updateTimerDisplay();
 }
 
-function getTodayPlan(plan) {
-  const today = getDayName();
-  return plan.find(day => day.day === today) || plan[0] || null;
+function updateTimerDisplay() {
+  const display = document.getElementById('timer-display');
+  if (!display) return;
+  const min = Math.floor(timerSeconds / 60);
+  const sec = timerSeconds % 60;
+  display.textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
 }
 
-function getDayName() {
-  return new Date().toLocaleDateString('en-US', { weekday: 'long' });
+function showRestDay() {
+  const container = document.getElementById('exercises-container');
+  const sessionCard = document.getElementById('session-card');
+  if (sessionCard) sessionCard.style.display = 'none';
+
+  container.innerHTML = `
+    <div class="card animate-fade-in-up">
+      <div class="card-body" style="text-align: center; padding: 60px 24px;">
+        <div style="font-size: 3rem; margin-bottom: 16px;">Rest</div>
+        <h3 style="color: var(--text); margin-bottom: 8px;">Recovery Day</h3>
+        <p class="text-muted" style="max-width: 420px; margin: 0 auto; line-height: 1.6;">
+          No workout is scheduled for today. Use the weekly plan below to review the next active day and its posture cues.
+        </p>
+      </div>
+    </div>
+  `;
 }
 
-function setText(id, value) {
-  const element = document.getElementById(id);
-  if (element) element.textContent = value;
-}
+function getWorkoutPoseMarkup(name) {
+  const lower = /squat|lunge|leg|walk|jog|hike|cycling|bike|cardio|jump/i.test(name);
+  const push = /press|push|dip/i.test(name);
+  const pull = /pull|row|curl|deadlift/i.test(name);
+  const accent = lower ? '#00b4d8' : push ? '#00d4aa' : pull ? '#ff8a65' : '#7ccf7a';
+  const arms = push ? 'M38 28 L18 36 M38 28 L58 36' : pull ? 'M38 28 L20 22 M38 28 L56 22' : 'M38 28 L20 32 M38 28 L56 32';
+  const legs = lower ? 'M38 42 L24 60 M38 42 L50 58 M24 60 L18 68 M50 58 L56 68' : 'M38 42 L30 62 M38 42 L48 62';
 
-function formatDuration(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-}
-
-function playCompletionTone() {
-  try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-    gain.gain.setValueAtTime(0.001, audioContext.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.15, audioContext.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.25);
-
-    oscillator.connect(gain);
-    gain.connect(audioContext.destination);
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.25);
-  } catch (error) {
-    console.warn('Audio cue unavailable:', error);
-  }
-}
-
-function getExerciseAnimationMarkup(animation) {
   return `
-    <svg viewBox="0 0 120 120" class="motion-figure motion-${escapeHtml(animation)}" aria-hidden="true">
-      <circle cx="60" cy="18" r="10"></circle>
-      <path class="motion-body" d="M60 28 L60 60"></path>
-      <path class="motion-arm motion-arm-left" d="M60 38 L32 54"></path>
-      <path class="motion-arm motion-arm-right" d="M60 38 L88 54"></path>
-      <path class="motion-leg motion-leg-left" d="M60 60 L40 96"></path>
-      <path class="motion-leg motion-leg-right" d="M60 60 L80 96"></path>
+    <svg width="76" height="76" viewBox="0 0 76 76" fill="none" aria-hidden="true">
+      <circle cx="38" cy="14" r="7" fill="${accent}" opacity="0.95"/>
+      <path d="M38 22 L38 42" stroke="${accent}" stroke-width="5" stroke-linecap="round"/>
+      <path d="${arms}" stroke="${accent}" stroke-width="5" stroke-linecap="round"/>
+      <path d="${legs}" stroke="${accent}" stroke-width="5" stroke-linecap="round"/>
     </svg>
   `;
 }
 
-function escapeHtml(value) {
+function escapeHtml(str) {
   const div = document.createElement('div');
-  div.textContent = value;
+  div.textContent = str;
   return div.innerHTML;
 }
