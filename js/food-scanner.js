@@ -130,9 +130,10 @@ async function analyzeCurrentPhoto() {
 
   try {
     const response = await foodAPI.analyzePhoto(formData);
-    latestAnalysis = response.analysis;
-    renderAnalysis(response.analysis);
-    persistScanHistory(response.analysis, document.getElementById('preview-image')?.src || '');
+    const analysis = normalizeApiAnalysis(response);
+    latestAnalysis = analysis;
+    renderAnalysis(analysis);
+    persistScanHistory(analysis, document.getElementById('preview-image')?.src || '');
     renderScanHistory();
     showToast('Meal analyzed successfully', 'success');
   } catch (error) {
@@ -142,6 +143,26 @@ async function analyzeCurrentPhoto() {
     toggleAnalyzing(false);
     setLoading('analyze-photo-btn', false);
   }
+}
+
+function normalizeApiAnalysis(response) {
+  const analysis = response?.analysis || response?.food || response;
+
+  if (!analysis || typeof analysis !== 'object') {
+    throw new Error('Scanner response was empty.');
+  }
+
+  return {
+    food_name: analysis.food_name || analysis.name || 'Detected Meal',
+    serving_estimate: analysis.serving_estimate || analysis.serving || '1 serving',
+    estimated_calories: Number(analysis.estimated_calories ?? analysis.calories ?? 0),
+    protein_g: Number(analysis.protein_g ?? analysis.protein ?? analysis.protein_g_for_quantity ?? 0),
+    carbs_g: Number(analysis.carbs_g ?? analysis.carbs ?? analysis.carbs_g_for_quantity ?? 0),
+    fat_g: Number(analysis.fat_g ?? analysis.fats ?? analysis.fat_g_for_quantity ?? 0),
+    confidence: analysis.confidence || 'Estimated',
+    notes: Array.isArray(analysis.notes) ? analysis.notes : [],
+    feedback: analysis.feedback || 'Balanced meal estimate ready.',
+  };
 }
 
 async function addCurrentAnalysisToMealLog() {
