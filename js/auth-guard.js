@@ -6,6 +6,6 @@
 (function () {
   const token = localStorage.getItem(CONFIG.TOKEN_KEY);
   if (!token) {
-    window.location.replace('/index.html');
+    window.location.replace('index.html');
   }
 })();
