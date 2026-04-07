@@ -70,12 +70,12 @@
     <main class="page-content">
       <!-- Date Selector -->
       <div class="card mb-3 animate-fade-in-up">
-        <div class="card-body" style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="card-body tracker-date-bar">
+          <div class="tracker-date-controls">
             <button id="prev-day" class="btn-icon" aria-label="Previous day">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
-            <input type="date" id="tracker-date" class="form-input" style="max-width: 200px;">
+            <input type="date" id="tracker-date" class="form-input tracker-date-input">
             <button id="next-day" class="btn-icon" aria-label="Next day">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
@@ -210,25 +210,25 @@
       <!-- ═══ Tab: Water ═══ -->
       <div class="tab-content" id="content-water">
         <div class="card animate-fade-in-up">
-          <div class="card-body" style="text-align: center; padding: 40px;">
-            <div style="font-size: 3rem; margin-bottom: 16px;">💧</div>
-            <div style="font-size: 2.8rem; font-weight: 700; color: var(--accent); margin-bottom: 4px;" id="water-display">0 ml</div>
+          <div class="card-body tracker-center-card">
+            <div class="tracker-center-icon">💧</div>
+            <div class="tracker-center-value" id="water-display">0 ml</div>
             <div class="text-muted mb-3" id="water-goal-display">Goal: 3000 ml</div>
 
-            <div class="progress-wrap" style="max-width: 400px; margin: 0 auto 24px; height: 14px;">
+            <div class="progress-wrap tracker-progress-wrap">
               <div class="progress-bar" id="water-progress" style="width: 0%;"></div>
             </div>
 
-            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <div class="tracker-water-actions">
               <button class="btn btn-outline btn-sm water-add" data-amount="150">+150 ml</button>
               <button class="btn btn-outline btn-sm water-add" data-amount="250">+250 ml — Glass</button>
               <button class="btn btn-outline btn-sm water-add" data-amount="500">+500 ml — Bottle</button>
               <button class="btn btn-outline btn-sm water-add" data-amount="1000">+1000 ml — Litre</button>
             </div>
 
-            <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center;">
-              <div class="form-group" style="margin: 0; max-width: 150px;">
-                <input type="number" id="water-custom" class="form-input" placeholder="Custom ml" min="1" style="text-align: center;">
+            <div class="tracker-water-custom-row">
+              <div class="form-group tracker-water-custom-group">
+                <input type="number" id="water-custom" class="form-input tracker-water-custom-input" placeholder="Custom ml" min="1">
               </div>
               <button id="water-custom-btn" class="btn btn-primary btn-sm">Add</button>
             </div>
@@ -239,12 +239,12 @@
       <!-- ═══ Tab: Sleep ═══ -->
       <div class="tab-content" id="content-sleep">
         <div class="card animate-fade-in-up">
-          <div class="card-body" style="text-align: center; padding: 40px;">
-            <div style="font-size: 3rem; margin-bottom: 16px;">😴</div>
-            <div style="font-size: 2.8rem; font-weight: 700; color: var(--accent); margin-bottom: 4px;" id="sleep-display">0 hrs</div>
+          <div class="card-body tracker-center-card">
+            <div class="tracker-center-icon">😴</div>
+            <div class="tracker-center-value" id="sleep-display">0 hrs</div>
             <div class="text-muted mb-3">Recommended: 7-9 hours</div>
 
-            <div class="range-wrap" style="max-width: 400px; margin: 0 auto 24px;">
+            <div class="range-wrap tracker-range-wrap">
               <div class="range-value" id="sleep-range-display">0</div>
               <input type="range" id="sleep-range" class="form-range" min="0" max="12" step="0.5" value="0">
               <div class="range-labels"><span>0h</span><span>6h</span><span>12h</span></div>

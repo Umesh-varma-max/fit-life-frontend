@@ -58,10 +58,10 @@ function renderExercises(todayPlan) {
 
   container.innerHTML = `
     <div class="card mb-3 animate-fade-in-up">
-      <div class="card-body" style="display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center;">
-        <div>
-          <div style="font-size: 1.1rem; font-weight: 700; color: var(--text);">${escapeHtml(todayPlan.plan_name || "Today's Workout")}</div>
-          <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${todayPlan.exercises.length} exercises · ${todayPlan.total_duration_min || 0} min · ${todayPlan.total_estimated_calories_burn || 0} kcal burn</div>
+      <div class="card-body workout-day-summary">
+        <div class="workout-day-summary-copy">
+          <div class="workout-day-summary-title">${escapeHtml(todayPlan.plan_name || "Today's Workout")}</div>
+          <div class="text-muted workout-day-summary-meta">${todayPlan.exercises.length} exercises · ${todayPlan.total_duration_min || 0} min · ${todayPlan.total_estimated_calories_burn || 0} kcal burn</div>
         </div>
         <span class="badge badge-accent">Today</span>
       </div>
@@ -91,21 +91,21 @@ function renderExerciseCard(exercise, index) {
 
   return `
     <div class="card mb-2 hover-lift animate-fade-in-up exercise-card" id="ex-card-${index}" style="animation-delay: ${index * 0.08}s;">
-      <div class="card-body" style="display: flex; align-items: stretch; gap: 16px; padding: 20px 24px; flex-wrap: wrap;">
-        <div class="exercise-check" id="ex-check-${index}" style="width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; transition: var(--transition);"></div>
-        <div style="width: 120px; min-height: 120px; border-radius: 18px; border: 1px solid var(--border); background: linear-gradient(180deg, rgba(0,212,170,0.12), rgba(0,180,216,0.04)); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+      <div class="card-body exercise-card-body">
+        <div class="exercise-check" id="ex-check-${index}"></div>
+        <div class="exercise-visual">
           ${getWorkoutPoseMarkup(exercise.name)}
         </div>
-        <div style="flex: 1; min-width: 260px;">
-          <div style="font-weight: 700; color: var(--text); font-size: 1rem;">${escapeHtml(exercise.name || 'Exercise')}</div>
-          <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${details.join(' · ')}</div>
-          <div style="margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--border);">
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Posture</div>
-            <div style="font-weight: 600; color: var(--text);">${escapeHtml(exercise.posture || 'Controlled neutral posture')}</div>
-            <div class="text-muted" style="font-size: 0.85rem; margin-top: 8px; line-height: 1.55;">${Array.isArray(exercise.posture_cues) ? exercise.posture_cues.map(escapeHtml).join(' ') : ''}</div>
+        <div class="exercise-copy">
+          <div class="exercise-name">${escapeHtml(exercise.name || 'Exercise')}</div>
+          <div class="text-muted exercise-meta">${details.join(' · ')}</div>
+          <div class="exercise-posture-box">
+            <div class="exercise-posture-label">Posture</div>
+            <div class="exercise-posture-title">${escapeHtml(exercise.posture || 'Controlled neutral posture')}</div>
+            <div class="text-muted exercise-posture-cues">${Array.isArray(exercise.posture_cues) ? exercise.posture_cues.map(escapeHtml).join(' ') : ''}</div>
           </div>
         </div>
-        <div style="display: flex; gap: 8px; align-items: flex-start;">
+        <div class="exercise-actions">
           <button class="btn btn-outline btn-sm start-timer-btn" data-index="${index}" data-name="${escapeHtml(exercise.name || 'Exercise')}">Timer</button>
           <button class="btn btn-primary btn-sm complete-btn" data-index="${index}" data-name="${escapeHtml(exercise.name || 'Exercise')}" data-duration="${exercise.duration_min || exercise.estimated_duration_min || 0}">Done</button>
         </div>
@@ -120,25 +120,25 @@ function renderWeeklyPlan(plans) {
 
   container.innerHTML = plans.map((plan, index) => `
     <div class="card mb-2 hover-lift animate-fade-in-up" style="animation-delay: ${index * 0.05}s;">
-      <div class="card-body" style="padding: 20px;">
-        <div style="display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 16px;">
-          <div>
-            <div style="font-size: 1.05rem; font-weight: 700; color: var(--text);">${escapeHtml(plan.day)} · ${escapeHtml(plan.plan_name || `${plan.day} Workout`)}</div>
-            <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${plan.exercises.length} exercises · ${plan.total_duration_min || 0} min · ${plan.total_estimated_calories_burn || 0} kcal burn</div>
+      <div class="card-body weekly-plan-card-body">
+        <div class="weekly-plan-head">
+          <div class="weekly-plan-head-copy">
+            <div class="weekly-plan-title">${escapeHtml(plan.day)} · ${escapeHtml(plan.plan_name || `${plan.day} Workout`)}</div>
+            <div class="text-muted weekly-plan-meta">${plan.exercises.length} exercises · ${plan.total_duration_min || 0} min · ${plan.total_estimated_calories_burn || 0} kcal burn</div>
           </div>
           <span class="badge ${plan.day === getDayName() ? 'badge-accent' : 'badge-outline'}">${plan.day === getDayName() ? 'Today' : 'Planned'}</span>
         </div>
-        <div style="display: grid; gap: 12px;">
+        <div class="weekly-plan-list">
           ${plan.exercises.map(exercise => `
-            <div style="display: grid; grid-template-columns: 108px 1fr; gap: 14px; padding: 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface-2);">
-              <div style="border-radius: 14px; background: linear-gradient(180deg, rgba(0,212,170,0.14), rgba(0,180,216,0.05)); display: flex; align-items: center; justify-content: center; min-height: 108px;">
+            <div class="weekly-plan-item">
+              <div class="weekly-plan-visual">
                 ${getWorkoutPoseMarkup(exercise.name)}
               </div>
-              <div>
-                <div style="font-weight: 700; color: var(--text);">${escapeHtml(exercise.name)}</div>
-                <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${buildExerciseMeta(exercise)}</div>
-                <div style="margin-top: 10px; font-size: 0.9rem; color: var(--text);">${escapeHtml(exercise.posture || 'Controlled neutral posture')}</div>
-                <div class="text-muted" style="margin-top: 6px; line-height: 1.55; font-size: 0.85rem;">${Array.isArray(exercise.posture_cues) ? exercise.posture_cues.map(escapeHtml).join(' ') : ''}</div>
+              <div class="weekly-plan-copy">
+                <div class="weekly-plan-exercise-title">${escapeHtml(exercise.name)}</div>
+                <div class="text-muted weekly-plan-exercise-meta">${buildExerciseMeta(exercise)}</div>
+                <div class="weekly-plan-posture">${escapeHtml(exercise.posture || 'Controlled neutral posture')}</div>
+                <div class="text-muted weekly-plan-cues">${Array.isArray(exercise.posture_cues) ? exercise.posture_cues.map(escapeHtml).join(' ') : ''}</div>
               </div>
             </div>
           `).join('')}

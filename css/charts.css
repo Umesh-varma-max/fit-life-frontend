@@ -8,6 +8,18 @@
   padding: 20px;
 }
 
+.chart-container-sm {
+  position: relative;
+  width: min(100%, 220px);
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+.chart-container-sm canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .chart-container canvas {
   max-height: 300px;
 }
@@ -137,8 +149,16 @@
 
 /* ─── Responsive ─── */
 @media (max-width: 768px) {
+  .chart-container {
+    padding: 8px 0;
+  }
+
   .chart-container canvas {
     max-height: 220px;
+  }
+
+  .chart-container-sm {
+    width: min(100%, 180px);
   }
 
   .donut-small {

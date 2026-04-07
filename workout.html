@@ -59,7 +59,7 @@
 
     <main class="page-content">
       <div class="card card-glass mb-3 animate-fade-in-up">
-        <div class="card-body" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px;">
+        <div class="card-body workout-summary-grid">
           <div>
             <div class="text-muted" style="font-size: 0.8rem;">Goal</div>
             <div id="workout-goal" style="font-size: 1.25rem; font-weight: 700; color: var(--text);">--</div>
@@ -80,12 +80,12 @@
       </div>
 
       <div class="card card-glass mb-3 animate-fade-in-up" id="session-card">
-        <div class="card-body" style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+        <div class="card-body workout-session-body">
           <div>
             <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent);" id="session-progress">0 / 0</div>
             <div class="text-muted" style="font-size: 0.85rem;">Exercises completed today</div>
           </div>
-          <div style="flex: 1; min-width: 200px;">
+          <div class="workout-session-progress">
             <div class="progress-wrap" style="height: 12px;">
               <div class="progress-bar" id="session-bar" style="width: 0%;"></div>
             </div>
@@ -95,10 +95,10 @@
       </div>
 
       <div class="card mb-3 animate-fade-in-up delay-1" id="timer-card" style="display: none;">
-        <div class="card-body" style="text-align: center; padding: 32px;">
+        <div class="card-body workout-timer-body">
           <div class="text-muted mb-1" style="font-size: 0.85rem;" id="timer-exercise-name">Exercise</div>
           <div style="font-size: 3.5rem; font-weight: 700; font-family: var(--font-mono); color: var(--accent); margin-bottom: 16px;" id="timer-display">00:00</div>
-          <div style="display: flex; gap: 12px; justify-content: center;">
+          <div class="timer-controls">
             <button id="timer-start" class="btn btn-primary btn-sm">Start</button>
             <button id="timer-pause" class="btn btn-ghost btn-sm" style="display: none;">Pause</button>
             <button id="timer-reset" class="btn btn-ghost btn-sm">Reset</button>
