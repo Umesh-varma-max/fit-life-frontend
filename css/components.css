@@ -1306,6 +1306,48 @@
   border: 1px solid var(--border);
 }
 
+.scanner-warning-card {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+}
+
+.scanner-warning-card-alert {
+  background: var(--warning-bg);
+  border-color: rgba(255, 217, 61, 0.35);
+}
+
+.scanner-warning-card-success {
+  background: var(--success-bg);
+  border-color: rgba(107, 203, 119, 0.35);
+}
+
+.scanner-warning-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.scanner-warning-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.scanner-warning-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.scanner-warning-list li + li {
+  margin-top: 4px;
+}
+
 .scanner-feedback-label {
   font-size: 0.78rem;
   text-transform: uppercase;

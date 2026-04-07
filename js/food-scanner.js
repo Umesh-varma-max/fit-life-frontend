@@ -162,6 +162,7 @@ async function analyzeCurrentPhoto() {
 
 function normalizeApiAnalysis(response) {
   const analysis = response?.analysis || response?.food || response;
+  const dietWarning = response?.analysis?.diet_warning || response?.food?.diet_warning || analysis?.diet_warning || null;
 
   if (!analysis || typeof analysis !== 'object') {
     throw new Error('Scanner response was empty.');
@@ -177,9 +178,21 @@ function normalizeApiAnalysis(response) {
     confidence: analysis.confidence || 'Estimated',
     notes: Array.isArray(analysis.notes) ? analysis.notes : [],
     feedback: analysis.feedback || 'Balanced meal estimate ready.',
+    diet_warning: normalizeDietWarning(dietWarning),
   };
 
   return refineAnalysisWithLibrary(normalized);
+}
+
+function normalizeDietWarning(dietWarning) {
+  if (!dietWarning || typeof dietWarning !== 'object') return null;
+
+  return {
+    should_warn: Boolean(dietWarning.should_warn),
+    title: dietWarning.title || (dietWarning.should_warn ? 'Diet warning' : 'Goal fit'),
+    message: dietWarning.message || '',
+    issues: Array.isArray(dietWarning.issues) ? dietWarning.issues.filter(Boolean) : []
+  };
 }
 
 async function addCurrentAnalysisToMealLog() {
@@ -216,6 +229,12 @@ function renderAnalysis(analysis) {
   const macroGrid = document.getElementById('analysis-macro-grid');
   const feedback = document.getElementById('analysis-feedback');
   const tags = document.getElementById('analysis-tags');
+  const warningCard = document.getElementById('analysis-diet-warning');
+  const warningLabel = document.getElementById('analysis-warning-label');
+  const warningBadge = document.getElementById('analysis-warning-badge');
+  const warningTitle = document.getElementById('analysis-warning-title');
+  const warningMessage = document.getElementById('analysis-warning-message');
+  const warningIssues = document.getElementById('analysis-warning-issues');
 
   if (foodName) foodName.textContent = analysis.food_name || 'Detected Meal';
   if (serving) serving.textContent = analysis.serving_estimate || '1 serving';
@@ -238,11 +257,49 @@ function renderAnalysis(analysis) {
       : '<span class="text-muted">No additional notes.</span>';
   }
 
+  renderDietWarning(analysis.diet_warning, {
+    warningCard,
+    warningLabel,
+    warningBadge,
+    warningTitle,
+    warningMessage,
+    warningIssues
+  });
+
   resultCard?.classList.remove('hidden');
 }
 
 function hideAnalysisCard() {
   document.getElementById('analysis-result-card')?.classList.add('hidden');
+  document.getElementById('analysis-diet-warning')?.classList.add('hidden');
+}
+
+function renderDietWarning(dietWarning, elements) {
+  const { warningCard, warningLabel, warningBadge, warningTitle, warningMessage, warningIssues } = elements;
+  if (!warningCard || !warningLabel || !warningBadge || !warningTitle || !warningMessage || !warningIssues) return;
+
+  if (!dietWarning) {
+    warningCard.classList.add('hidden');
+    return;
+  }
+
+  const isWarning = Boolean(dietWarning.should_warn);
+  warningCard.classList.remove('hidden', 'scanner-warning-card-neutral', 'scanner-warning-card-alert', 'scanner-warning-card-success');
+  warningCard.classList.add(isWarning ? 'scanner-warning-card-alert' : 'scanner-warning-card-success');
+  warningLabel.textContent = isWarning ? 'Diet Warning' : 'Goal Fit';
+  warningBadge.textContent = isWarning ? 'Needs attention' : 'Goal Fit';
+  warningBadge.className = `badge ${isWarning ? 'badge-warning' : 'badge-success'}`;
+  warningTitle.textContent = dietWarning.title || (isWarning ? 'Diet warning' : 'Goal fit');
+  warningMessage.textContent = dietWarning.message || '';
+
+  const issues = Array.isArray(dietWarning.issues) ? dietWarning.issues : [];
+  if (issues.length) {
+    warningIssues.innerHTML = issues.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+    warningIssues.classList.remove('hidden');
+  } else {
+    warningIssues.innerHTML = '';
+    warningIssues.classList.add('hidden');
+  }
 }
 
 function renderScanHistory() {
