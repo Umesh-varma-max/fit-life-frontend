@@ -1,27 +1,57 @@
-// ──────────────────────────────────────────────────
-// auth.js — Login / Register Logic
-// ──────────────────────────────────────────────────
-
 document.addEventListener('DOMContentLoaded', () => {
-  // Redirect if already logged in
   const token = localStorage.getItem(CONFIG.TOKEN_KEY);
   if (token) {
     window.location.replace('dashboard.html');
     return;
   }
 
+  setupAuthEntrySheet();
   setupPasswordToggles();
   setupLoginForm();
   setupRegisterForm();
   setupPasswordStrength();
 });
 
-// ─── Password Visibility Toggles ─────────────────
+function setupAuthEntrySheet() {
+  const shell = document.getElementById('welcome-shell');
+  if (!shell) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const openBtn = document.getElementById('open-login');
+  const closeBtn = document.getElementById('close-login');
+  const backdrop = document.getElementById('auth-sheet-backdrop');
+
+  const setLoginMode = (open) => {
+    shell.classList.toggle('auth-login-mode', open);
+    if (!open) {
+      shell.classList.remove('auth-force-login');
+      history.replaceState({}, '', 'index.html');
+    }
+  };
+
+  openBtn?.addEventListener('click', () => {
+    setLoginMode(true);
+    document.getElementById('login-email')?.focus();
+  });
+
+  closeBtn?.addEventListener('click', () => setLoginMode(false));
+  backdrop?.addEventListener('click', () => setLoginMode(false));
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setLoginMode(false);
+  });
+
+  if (params.get('login') === '1') {
+    shell.classList.add('auth-force-login');
+    document.getElementById('login-email')?.focus();
+  }
+}
+
 function setupPasswordToggles() {
   const toggles = [
     { btn: 'toggle-login-password', input: 'login-password' },
-    { btn: 'toggle-reg-password',   input: 'reg-password' },
-    { btn: 'toggle-reg-confirm',    input: 'reg-confirm' },
+    { btn: 'toggle-reg-password', input: 'reg-password' },
+    { btn: 'toggle-reg-confirm', input: 'reg-confirm' },
   ];
 
   toggles.forEach(({ btn, input }) => {
@@ -39,7 +69,6 @@ function setupPasswordToggles() {
   });
 }
 
-// ─── Password Strength Indicator ──────────────────
 function setupPasswordStrength() {
   const pwdField = document.getElementById('reg-password');
   if (!pwdField) return;
@@ -56,6 +85,7 @@ function setupPasswordStrength() {
     const label = document.getElementById('strength-label');
 
     segments.forEach((seg, i) => {
+      if (!seg) return;
       seg.className = 'strength-segment';
       if (pwd.length > 0 && i < strength.score) {
         seg.classList.add(`active-${strength.class}`);
@@ -69,7 +99,6 @@ function setupPasswordStrength() {
   });
 }
 
-// ─── Login Form ──────────────────────────────────
 function setupLoginForm() {
   const form = document.getElementById('login-form');
   if (!form) return;
@@ -81,7 +110,6 @@ function setupLoginForm() {
     const email = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
 
-    // Validate
     let valid = true;
     if (!email || !isValidEmail(email)) {
       showFieldError('login-email', 'Enter a valid email address');
@@ -93,7 +121,6 @@ function setupLoginForm() {
     }
     if (!valid) return;
 
-    // Submit
     setLoading('login-btn', true);
     try {
       const data = await authAPI.login({ email, password });
@@ -116,7 +143,6 @@ function setupLoginForm() {
   });
 }
 
-// ─── Register Form ───────────────────────────────
 function setupRegisterForm() {
   const form = document.getElementById('register-form');
   if (!form) return;
@@ -130,7 +156,6 @@ function setupRegisterForm() {
     const password = document.getElementById('reg-password').value;
     const confirm = document.getElementById('reg-confirm').value;
 
-    // Validate
     let valid = true;
     if (!full_name || full_name.length < 2) {
       showFieldError('reg-name', 'Name must be at least 2 characters');
@@ -150,16 +175,14 @@ function setupRegisterForm() {
     }
     if (!valid) return;
 
-    // Submit
     setLoading('register-btn', true);
     try {
       await authAPI.register({ full_name, email, password });
       showToast('Account created! Please sign in.', 'success');
       setTimeout(() => {
-        window.location.href = 'index.html';
+        window.location.href = 'index.html?login=1';
       }, 1000);
     } catch (err) {
-      // Handle validation errors from backend
       if (err.errors) {
         Object.entries(err.errors).forEach(([field, messages]) => {
           const fieldMap = { email: 'reg-email', password: 'reg-password', full_name: 'reg-name' };

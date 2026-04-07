@@ -1,36 +1,41 @@
-// ──────────────────────────────────────────────────
-// profile.js — Profile Step Form + Live BMI
-// ──────────────────────────────────────────────────
-
 let currentStep = 1;
-const totalSteps = 3;
+const totalSteps = 6;
+let heightUnit = 'cm';
 
 document.addEventListener('DOMContentLoaded', () => {
   setupStepNavigation();
-  setupLiveBMI();
-  setupSleepSlider();
+  setupNumericControls();
+  setupHeightUnitToggle();
   loadExistingProfile();
+  syncAllDisplays();
 });
 
-// ─── Step Navigation ─────────────────────────────
 function setupStepNavigation() {
-  const nextBtn = document.getElementById('next-btn');
-  const prevBtn = document.getElementById('prev-btn');
-  const saveBtn = document.getElementById('save-btn');
-  const form = document.getElementById('profile-form');
-
-  nextBtn.addEventListener('click', () => {
-    if (validateStep(currentStep)) {
-      goToStep(currentStep + 1);
-    }
+  document.querySelectorAll('[data-next-step]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (validateStep(currentStep)) goToStep(currentStep + 1);
+    });
   });
 
-  prevBtn.addEventListener('click', () => {
+  document.querySelectorAll('[data-prev-step]').forEach((button) => {
+    button.addEventListener('click', () => goToStep(currentStep - 1));
+  });
+
+  const prevTop = document.getElementById('prev-btn');
+  prevTop?.addEventListener('click', () => {
+    if (currentStep === 1) {
+      window.location.href = 'dashboard.html';
+      return;
+    }
     goToStep(currentStep - 1);
   });
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  document.getElementById('next-btn')?.addEventListener('click', () => {
+    if (validateStep(currentStep)) goToStep(currentStep + 1);
+  });
+
+  document.getElementById('profile-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
     if (!validateStep(currentStep)) return;
     await saveProfile();
   });
@@ -39,58 +44,26 @@ function setupStepNavigation() {
 function goToStep(step) {
   if (step < 1 || step > totalSteps) return;
 
-  // Hide current
-  document.getElementById(`step-${currentStep}`).classList.remove('active');
-  document.getElementById(`step-dot-${currentStep}`).classList.remove('active');
+  document.getElementById(`step-${currentStep}`)?.classList.remove('active');
+  currentStep = step;
+  document.getElementById(`step-${currentStep}`)?.classList.add('active');
 
-  // Mark completed
-  if (step > currentStep) {
-    document.getElementById(`step-dot-${currentStep}`).classList.add('done');
-    document.getElementById(`step-dot-${currentStep}`).textContent = '✓';
-    if (currentStep < totalSteps) {
-      document.getElementById(`step-line-${currentStep}`).classList.add('done');
-    }
-  } else {
-    // Going back
-    document.getElementById(`step-dot-${currentStep}`).classList.remove('done');
-    document.getElementById(`step-dot-${currentStep}`).textContent = currentStep;
-    if (currentStep > 1) {
-      document.getElementById(`step-line-${currentStep - 1}`).classList.remove('done');
-    }
+  const label = document.getElementById('screen-label');
+  if (label) {
+    label.textContent = document.getElementById(`step-${currentStep}`)?.dataset.label || 'Profile Setup';
   }
 
-  currentStep = step;
-
-  // Show new
-  document.getElementById(`step-${currentStep}`).classList.remove('active');
-  document.getElementById(`step-${currentStep}`).classList.add('active');
-  document.getElementById(`step-dot-${currentStep}`).classList.add('active');
-
-  // Toggle buttons
-  const nextBtn = document.getElementById('next-btn');
-  const prevBtn = document.getElementById('prev-btn');
-  const saveBtn = document.getElementById('save-btn');
-
-  prevBtn.style.display = currentStep === 1 ? 'none' : '';
-  nextBtn.style.display = currentStep === totalSteps ? 'none' : '';
-  saveBtn.style.display = currentStep === totalSteps ? '' : 'none';
+  const prevTop = document.getElementById('prev-btn');
+  if (prevTop) {
+    prevTop.style.visibility = currentStep === 1 ? 'hidden' : 'visible';
+  }
 }
 
-// ─── Validation per step ─────────────────────────
 function validateStep(step) {
   let valid = true;
 
   if (step === 1) {
-    const age = document.getElementById('age').value;
     const gender = document.querySelector('input[name="gender"]:checked');
-
-    if (!age || age < 10 || age > 120) {
-      showFieldError('age', 'Enter a valid age (10–120)');
-      valid = false;
-    } else {
-      clearFieldError('age');
-    }
-
     if (!gender) {
       showFieldError('gender', 'Please select your gender');
       valid = false;
@@ -100,152 +73,196 @@ function validateStep(step) {
   }
 
   if (step === 2) {
-    const height = document.getElementById('height').value;
-    const weight = document.getElementById('weight').value;
-    const activity = document.querySelector('input[name="activity_level"]:checked');
-
-    if (!height || height < 50 || height > 280) {
-      showFieldError('height', 'Enter a valid height (50–280 cm)');
+    const age = Number(document.getElementById('age')?.value);
+    if (!age || age < 10 || age > 120) {
+      showFieldError('age', 'Enter a valid age between 10 and 120');
       valid = false;
-    } else { clearFieldError('height'); }
-
-    if (!weight || weight < 10 || weight > 500) {
-      showFieldError('weight', 'Enter a valid weight (10–500 kg)');
-      valid = false;
-    } else { clearFieldError('weight'); }
-
-    if (!activity) {
-      showFieldError('activity', 'Please select your activity level');
-      valid = false;
-    } else { clearFieldError('activity'); }
+    } else {
+      clearFieldError('age');
+    }
   }
 
   if (step === 3) {
+    const weight = Number(document.getElementById('weight')?.value);
+    if (!weight || weight < 30 || weight > 200) {
+      showFieldError('weight', 'Enter a valid weight between 30 and 200 kg');
+      valid = false;
+    } else {
+      clearFieldError('weight');
+    }
+  }
+
+  if (step === 4) {
+    const height = Number(document.getElementById('height')?.value);
+    if (!height || height < 50 || height > 280) {
+      showFieldError('height', 'Enter a valid height between 50 and 280 cm');
+      valid = false;
+    } else {
+      clearFieldError('height');
+    }
+  }
+
+  if (step === 5) {
+    const activity = document.querySelector('input[name="activity_level"]:checked');
+    if (!activity) {
+      showFieldError('activity', 'Please select your activity level');
+      valid = false;
+    } else {
+      clearFieldError('activity');
+    }
+  }
+
+  if (step === 6) {
     const goal = document.querySelector('input[name="fitness_goal"]:checked');
     if (!goal) {
-      showFieldError('goal', 'Please select your fitness goal');
+      showFieldError('goal', 'Please choose a goal');
       valid = false;
-    } else { clearFieldError('goal'); }
+    } else {
+      clearFieldError('goal');
+    }
   }
 
   return valid;
 }
 
-// ─── Live BMI Calculator ─────────────────────────
-function setupLiveBMI() {
-  const heightEl = document.getElementById('height');
-  const weightEl = document.getElementById('weight');
+function setupNumericControls() {
+  document.querySelectorAll('[data-adjust]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = button.dataset.adjust;
+      const delta = Number(button.dataset.delta || 0);
+      if (!target || !delta) return;
 
-  const updateBMI = () => {
-    const h = parseFloat(heightEl.value);
-    const w = parseFloat(weightEl.value);
-    const preview = document.getElementById('bmi-preview');
+      const input = document.getElementById(target);
+      if (!input) return;
 
-    if (h > 0 && w > 0) {
-      const bmi = calculateBMI(h, w);
-      const cat = getBMICategory(bmi);
+      const min = Number(input.min || 0);
+      const max = Number(input.max || 999);
+      const current = Number(input.value || min || 0);
+      let nextValue = current;
 
-      document.getElementById('live-bmi').textContent = bmi;
-      document.getElementById('live-bmi-label').textContent = cat.label;
-      document.getElementById('live-bmi-label').className = `badge badge-${cat.class}`;
-      document.getElementById('live-bmi-icon').textContent = cat.icon;
-      document.getElementById('live-bmi-msg').textContent = getBMIMessage(cat.label);
-      preview.style.display = '';
-    } else {
-      preview.style.display = 'none';
-    }
-  };
+      if (target === 'height' && heightUnit === 'ft') {
+        nextValue = current + (delta * 2.54);
+      } else {
+        nextValue = current + delta;
+      }
 
-  heightEl.addEventListener('input', updateBMI);
-  weightEl.addEventListener('input', updateBMI);
-}
-
-function getBMIMessage(category) {
-  const msgs = {
-    'Underweight': 'You may need to increase your calorie intake. Consult a nutritionist.',
-    'Normal':      'Great! You\'re in a healthy weight range. Keep it up!',
-    'Overweight':  'Consider a balanced diet with moderate exercise.',
-    'Obese':       'Please consult a healthcare professional for guidance.',
-  };
-  return msgs[category] || '';
-}
-
-// ─── Sleep Slider ────────────────────────────────
-function setupSleepSlider() {
-  const slider = document.getElementById('sleep');
-  const display = document.getElementById('sleep-display');
-  if (slider && display) {
-    slider.addEventListener('input', () => {
-      display.textContent = `${parseFloat(slider.value).toFixed(1)}`;
+      nextValue = Math.min(max, Math.max(min, Math.round(nextValue)));
+      input.value = nextValue;
+      syncAllDisplays();
     });
+  });
+}
+
+function setupHeightUnitToggle() {
+  document.querySelectorAll('[data-height-unit]').forEach((button) => {
+    button.addEventListener('click', () => {
+      heightUnit = button.dataset.heightUnit === 'ft' ? 'ft' : 'cm';
+      document.querySelectorAll('[data-height-unit]').forEach((toggle) => {
+        toggle.classList.toggle('active', toggle === button);
+      });
+      syncHeightDisplay();
+    });
+  });
+}
+
+function syncAllDisplays() {
+  syncAgeDisplay();
+  syncWeightDisplay();
+  syncHeightDisplay();
+}
+
+function syncAgeDisplay() {
+  const age = Number(document.getElementById('age')?.value || 31);
+  setText('age-preview-prev', Math.max(10, age - 1));
+  setText('age-preview-current', age);
+  setText('age-preview-next', Math.min(120, age + 1));
+  setText('age-stepper-display', age);
+}
+
+function syncWeightDisplay() {
+  const weight = Number(document.getElementById('weight')?.value || 65);
+  setText('weight-display', weight);
+}
+
+function syncHeightDisplay() {
+  const heightCm = Number(document.getElementById('height')?.value || 170);
+  const primary = document.getElementById('height-display');
+  const secondary = document.getElementById('height-stepper-display');
+  const unitLabel = document.getElementById('height-unit-label');
+  const stepperUnit = document.getElementById('height-stepper-unit');
+
+  if (heightUnit === 'ft') {
+    const totalInches = heightCm / 2.54;
+    const feet = Math.floor(totalInches / 12);
+    const inches = Math.round(totalInches % 12);
+    const formatted = `${feet}.${inches}`;
+    if (primary) primary.textContent = formatted;
+    if (secondary) secondary.textContent = formatted;
+    if (unitLabel) unitLabel.textContent = 'ft';
+    if (stepperUnit) stepperUnit.textContent = 'ft';
+  } else {
+    if (primary) primary.textContent = String(Math.round(heightCm));
+    if (secondary) secondary.textContent = String(Math.round(heightCm));
+    if (unitLabel) unitLabel.textContent = 'cm';
+    if (stepperUnit) stepperUnit.textContent = 'cm';
   }
 }
 
-// ─── Load Existing Profile ───────────────────────
 async function loadExistingProfile() {
   try {
     const data = await profileAPI.get();
-    const p = data.profile;
+    const profile = data.profile;
+
     cacheProfile({
-      ...p,
-      bmi: p.bmi ?? data.bmi,
-      daily_calories: p.daily_calories ?? data.daily_calories
+      ...profile,
+      bmi: profile.bmi ?? data.bmi,
+      daily_calories: profile.daily_calories ?? data.daily_calories
     });
 
-    // Step 1
-    document.getElementById('age').value = p.age || '';
-    if (p.gender) {
-      const gRadio = document.getElementById(`gender-${p.gender}`);
-      if (gRadio) gRadio.checked = true;
-    }
+    if (profile.age) document.getElementById('age').value = profile.age;
+    if (profile.height_cm) document.getElementById('height').value = Math.round(profile.height_cm);
+    if (profile.weight_kg) document.getElementById('weight').value = Math.round(profile.weight_kg);
+    if (profile.sleep_hours != null) document.getElementById('sleep').value = profile.sleep_hours;
 
-    // Step 2
-    document.getElementById('height').value = p.height_cm || '';
-    document.getElementById('weight').value = p.weight_kg || '';
-    if (p.activity_level) {
-      const aRadio = document.getElementById(`act-${p.activity_level}`);
-      if (aRadio) aRadio.checked = true;
-    }
-    if (p.sleep_hours != null) {
-      document.getElementById('sleep').value = p.sleep_hours;
-      document.getElementById('sleep-display').textContent = parseFloat(p.sleep_hours).toFixed(1);
-    }
+    const genderMap = { male: 'gender-male', female: 'gender-female' };
+    const genderRadio = document.getElementById(genderMap[profile.gender] || '');
+    if (genderRadio) genderRadio.checked = true;
 
-    // Step 3
-    if (p.food_habits) {
-      const fMap = { 'veg': 'food-veg', 'non-veg': 'food-nonveg', 'vegan': 'food-vegan', 'keto': 'food-keto', 'paleo': 'food-paleo' };
-      const fRadio = document.getElementById(fMap[p.food_habits]);
-      if (fRadio) fRadio.checked = true;
-    }
-    if (p.fitness_goal) {
-      const gMap = { 'weight_loss': 'goal-loss', 'muscle_gain': 'goal-gain', 'maintenance': 'goal-maintain' };
-      const gRadio = document.getElementById(gMap[p.fitness_goal]);
-      if (gRadio) gRadio.checked = true;
-    }
+    const activityMap = {
+      sedentary: 'activity-beginner',
+      light: 'activity-beginner',
+      moderate: 'activity-intermediate',
+      active: 'activity-advanced',
+      very_active: 'activity-advanced'
+    };
+    const activityRadio = document.getElementById(activityMap[profile.activity_level] || '');
+    if (activityRadio) activityRadio.checked = true;
 
-    // Trigger live BMI
-    document.getElementById('height').dispatchEvent(new Event('input'));
+    const goalMap = {
+      weight_loss: 'goal-loss',
+      muscle_gain: 'goal-gain',
+      maintenance: 'goal-fitter'
+    };
+    const goalRadio = document.getElementById(goalMap[profile.fitness_goal] || '');
+    if (goalRadio) goalRadio.checked = true;
 
-    showToast('Profile loaded', 'info', 2000);
-  } catch (err) {
-    if (err.status === 404) {
-      // No profile yet, that's fine
-    } else {
-      console.error('Failed to load profile:', err);
+    syncAllDisplays();
+  } catch (error) {
+    if (error.status !== 404) {
+      console.error('Failed to load profile:', error);
     }
   }
 }
 
-// ─── Save Profile ────────────────────────────────
 async function saveProfile() {
   const body = {
-    age: parseInt(document.getElementById('age').value),
+    age: parseInt(document.getElementById('age').value, 10),
     gender: document.querySelector('input[name="gender"]:checked')?.value,
     height_cm: parseFloat(document.getElementById('height').value),
     weight_kg: parseFloat(document.getElementById('weight').value),
     activity_level: document.querySelector('input[name="activity_level"]:checked')?.value,
-    sleep_hours: parseFloat(document.getElementById('sleep').value),
-    food_habits: document.querySelector('input[name="food_habits"]:checked')?.value || 'non-veg',
+    sleep_hours: parseFloat(document.getElementById('sleep').value || '7'),
+    food_habits: document.querySelector('input[name="food_habits"]')?.value || 'non-veg',
     fitness_goal: document.querySelector('input[name="fitness_goal"]:checked')?.value,
   };
 
@@ -257,16 +274,27 @@ async function saveProfile() {
       bmi: data.bmi,
       daily_calories: data.daily_calories
     });
-    showToast(`Profile saved! BMI: ${data.bmi} · Daily Calories: ${data.daily_calories} kcal`, 'success', 5000);
-    setTimeout(() => window.location.href = 'dashboard.html', 2000);
-  } catch (err) {
-    if (err.errors) {
-      Object.entries(err.errors).forEach(([field, msgs]) => {
-        showFieldError(field, msgs[0]);
+    showToast(`Profile saved! BMI: ${data.bmi} · Daily Calories: ${data.daily_calories} kcal`, 'success', 4000);
+    setTimeout(() => {
+      window.location.href = 'dashboard.html';
+    }, 900);
+  } catch (error) {
+    if (error.errors) {
+      Object.entries(error.errors).forEach(([field, messages]) => {
+        const fieldMap = {
+          activity_level: 'activity',
+          fitness_goal: 'goal'
+        };
+        showFieldError(fieldMap[field] || field, messages[0]);
       });
     }
-    showToast(err.message || 'Failed to save profile', 'error');
+    showToast(error.message || 'Failed to save profile', 'error');
   } finally {
     setLoading('save-btn', false);
   }
+}
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = String(value);
 }
