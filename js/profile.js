@@ -186,6 +186,11 @@ async function loadExistingProfile() {
   try {
     const data = await profileAPI.get();
     const p = data.profile;
+    cacheProfile({
+      ...p,
+      bmi: p.bmi ?? data.bmi,
+      daily_calories: p.daily_calories ?? data.daily_calories
+    });
 
     // Step 1
     document.getElementById('age').value = p.age || '';
@@ -247,6 +252,11 @@ async function saveProfile() {
   setLoading('save-btn', true);
   try {
     const data = await profileAPI.save(body);
+    cacheProfile({
+      ...body,
+      bmi: data.bmi,
+      daily_calories: data.daily_calories
+    });
     showToast(`Profile saved! BMI: ${data.bmi} · Daily Calories: ${data.daily_calories} kcal`, 'success', 5000);
     setTimeout(() => window.location.href = 'dashboard.html', 2000);
   } catch (err) {

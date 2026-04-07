@@ -1,6 +1,4 @@
-// ──────────────────────────────────────────────────
-// api.js — Central HTTP Client (All API calls)
-// ──────────────────────────────────────────────────
+// api.js - Central HTTP client
 
 function getToken() {
   return localStorage.getItem(CONFIG.TOKEN_KEY);
@@ -14,54 +12,53 @@ function getUser() {
   }
 }
 
+function getCachedProfile() {
+  try {
+    return JSON.parse(localStorage.getItem(CONFIG.PROFILE_CACHE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function cacheProfile(profile) {
+  if (!profile) return;
+  localStorage.setItem(CONFIG.PROFILE_CACHE_KEY, JSON.stringify(profile));
+}
+
+async function parseApiResponse(response) {
+  if (response.status === 204) {
+    return {};
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    return response.json();
+  }
+
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+}
+
 async function apiFetch(endpoint, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
-    ...(getToken() ? { 'Authorization': `Bearer ${getToken()}` } : {}),
+    ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {})
   };
 
   let response;
   try {
     response = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
       ...options,
-      headers: { ...headers, ...(options.headers || {}) },
+      headers: { ...headers, ...(options.headers || {}) }
     });
-  } catch (err) {
-    throw new Error('Network error — check your connection');
-  }
-
-  // Auto-redirect on expired/invalid token
-  if (response.status === 401) {
-    localStorage.removeItem(CONFIG.TOKEN_KEY);
-    localStorage.removeItem(CONFIG.USER_KEY);
-    window.location.href = 'index.html';
-    return;
-  }
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const error = new Error(data.message || 'Request failed');
-    error.status = response.status;
-    error.errors = data.errors || null;
-    throw error;
-  }
-
-  return data;
-}
-
-async function apiFetchForm(endpoint, formData, options = {}) {
-  let response;
-  try {
-    response = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
-      method: options.method || 'POST',
-      body: formData,
-      headers: {
-        ...(getToken() ? { 'Authorization': `Bearer ${getToken()}` } : {}),
-        ...(options.headers || {}),
-      },
-    });
-  } catch (err) {
+  } catch {
     throw new Error('Network error - check your connection');
   }
 
@@ -72,91 +69,127 @@ async function apiFetchForm(endpoint, formData, options = {}) {
     return;
   }
 
-  const data = await response.json();
+  const data = await parseApiResponse(response);
 
   if (!response.ok) {
-    const error = new Error(data.message || 'Request failed');
+    const error = new Error(data.message || data.error || 'Request failed');
     error.status = response.status;
     error.errors = data.errors || null;
+    error.payload = data;
     throw error;
   }
 
   return data;
 }
 
-// ─── AUTH ─────────────────────────────────────────
+async function apiFetchForm(endpoint, formData, options = {}) {
+  let response;
+
+  try {
+    response = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
+      method: options.method || 'POST',
+      body: formData,
+      headers: {
+        ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+        ...(options.headers || {})
+      }
+    });
+  } catch {
+    throw new Error('Network error - check your connection');
+  }
+
+  if (response.status === 401) {
+    localStorage.removeItem(CONFIG.TOKEN_KEY);
+    localStorage.removeItem(CONFIG.USER_KEY);
+    window.location.href = 'index.html';
+    return;
+  }
+
+  const data = await parseApiResponse(response);
+
+  if (!response.ok) {
+    const error = new Error(data.message || data.error || 'Request failed');
+    error.status = response.status;
+    error.errors = data.errors || null;
+    error.payload = data;
+    throw error;
+  }
+
+  return data;
+}
+
 const authAPI = {
   register: (body) => apiFetch('/register', { method: 'POST', body: JSON.stringify(body) }),
-  login:    (body) => apiFetch('/login',    { method: 'POST', body: JSON.stringify(body) }),
-  logout:   ()     => apiFetch('/logout',   { method: 'POST' }),
+  login: (body) => apiFetch('/login', { method: 'POST', body: JSON.stringify(body) }),
+  logout: () => apiFetch('/logout', { method: 'POST' })
 };
 
-// ─── PROFILE ─────────────────────────────────────
 const profileAPI = {
-  get:  ()     => apiFetch('/profile'),
-  save: (body) => apiFetch('/profile', { method: 'POST', body: JSON.stringify(body) }),
+  get: async () => {
+    const data = await apiFetch('/profile');
+    if (data.profile) cacheProfile(data.profile);
+    return data;
+  },
+  save: async (body) => {
+    const data = await apiFetch('/profile', { method: 'POST', body: JSON.stringify(body) });
+    cacheProfile({
+      ...body,
+      bmi: data.bmi,
+      daily_calories: data.daily_calories
+    });
+    return data;
+  }
 };
 
-// ─── DASHBOARD ───────────────────────────────────
 const dashboardAPI = {
-  get: () => apiFetch('/dashboard'),
+  get: () => apiFetch('/dashboard')
 };
 
-// ─── RECOMMENDATIONS ─────────────────────────────
 const recommendAPI = {
-  get: () => apiFetch('/recommendations'),
+  get: () => apiFetch('/recommendations')
 };
 
-// ─── ACTIVITY ────────────────────────────────────
 const activityAPI = {
-  log:    (body) => apiFetch('/activity', { method: 'POST', body: JSON.stringify(body) }),
-  getDay: (date) => apiFetch(`/activity?date=${date}`),
+  log: (body) => apiFetch('/activity', { method: 'POST', body: JSON.stringify(body) }),
+  getDay: (date) => apiFetch(`/activity?date=${date}`)
 };
 
-// ─── FOOD ────────────────────────────────────────
 const foodAPI = {
-  search:  (q)    => apiFetch(`/food/search?q=${encodeURIComponent(q)}`),
+  search: (query) => apiFetch(`/food/search?q=${encodeURIComponent(query)}`),
   barcode: (body) => apiFetch('/food/scan', { method: 'POST', body: JSON.stringify(body) }),
-  analyzePhoto: (formData) => apiFetchForm('/food/analyze-photo', formData),
+  analyzePhoto: (formData) => apiFetchForm('/food/analyze-photo', formData)
 };
 
-// ─── WORKOUT ─────────────────────────────────────
 const workoutAPI = {
-  getPlan:  ()     => apiFetch('/workout/plan'),
+  getPlan: () => apiFetch('/workout/plan'),
   savePlan: (body) => apiFetch('/workout/plan', { method: 'POST', body: JSON.stringify(body) }),
-  logTimer: (body) => apiFetch('/workout/timer', { method: 'POST', body: JSON.stringify(body) }),
+  logTimer: (body) => apiFetch('/workout/timer', { method: 'POST', body: JSON.stringify(body) })
 };
 
-// ─── TRAINERS ────────────────────────────────────
 const trainerAPI = {
-  list: (location) => apiFetch(`/trainers?location=${encodeURIComponent(location || '')}`),
+  list: (location) => apiFetch(`/trainers?location=${encodeURIComponent(location || '')}`)
 };
 
-// ─── DOCTORS ─────────────────────────────────────
 const doctorAPI = {
-  list: (spec) => apiFetch(`/doctors?specialization=${encodeURIComponent(spec || '')}`),
+  list: (specialization) => apiFetch(`/doctors?specialization=${encodeURIComponent(specialization || '')}`)
 };
 
-// ─── AI PLANNER ──────────────────────────────────
 const aiAPI = {
-  chat: (body) => apiFetch('/ai/diet-chat', { method: 'POST', body: JSON.stringify(body) }),
+  chat: (body) => apiFetch('/ai/diet-chat', { method: 'POST', body: JSON.stringify(body) })
 };
 
-// ─── REMINDERS ───────────────────────────────────
 const reminderAPI = {
-  list:   ()     => apiFetch('/reminders'),
-  add:    (body) => apiFetch('/reminders', { method: 'POST', body: JSON.stringify(body) }),
-  delete: (id)   => apiFetch(`/reminders/${id}`, { method: 'DELETE' }),
+  list: () => apiFetch('/reminders'),
+  add: (body) => apiFetch('/reminders', { method: 'POST', body: JSON.stringify(body) }),
+  delete: (id) => apiFetch(`/reminders/${id}`, { method: 'DELETE' })
 };
 
-// ─── PROGRESS ────────────────────────────────────
 const progressAPI = {
-  get: (period) => apiFetch(`/progress?period=${period}`),
+  get: (period) => apiFetch(`/progress?period=${period}`)
 };
 
-// ─── EXPORT ──────────────────────────────────────
 const exportAPI = {
   pdf: () => fetch(`${CONFIG.API_BASE}/export/pdf`, {
-    headers: { 'Authorization': `Bearer ${getToken()}` },
-  }),
+    headers: { Authorization: `Bearer ${getToken()}` }
+  })
 };

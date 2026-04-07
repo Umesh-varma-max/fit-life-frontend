@@ -5,6 +5,21 @@ let currentStream = null;
 let currentFile = null;
 let latestAnalysis = null;
 
+const NUTRITION_LIBRARY = [
+  { keywords: ['biryani'], food_name: 'Chicken Biryani', serving_estimate: '1 plate', estimated_calories: 620, protein_g: 26, carbs_g: 68, fat_g: 24 },
+  { keywords: ['dosa'], food_name: 'Dosa', serving_estimate: '2 pieces', estimated_calories: 320, protein_g: 8, carbs_g: 46, fat_g: 10 },
+  { keywords: ['idli'], food_name: 'Idli', serving_estimate: '3 pieces', estimated_calories: 180, protein_g: 6, carbs_g: 36, fat_g: 1 },
+  { keywords: ['pizza'], food_name: 'Pizza', serving_estimate: '2 slices', estimated_calories: 520, protein_g: 20, carbs_g: 54, fat_g: 24 },
+  { keywords: ['burger'], food_name: 'Burger', serving_estimate: '1 burger', estimated_calories: 540, protein_g: 24, carbs_g: 42, fat_g: 30 },
+  { keywords: ['salad'], food_name: 'Salad Bowl', serving_estimate: '1 bowl', estimated_calories: 220, protein_g: 9, carbs_g: 18, fat_g: 12 },
+  { keywords: ['banana'], food_name: 'Banana', serving_estimate: '1 medium', estimated_calories: 105, protein_g: 1.3, carbs_g: 27, fat_g: 0.3 },
+  { keywords: ['apple'], food_name: 'Apple', serving_estimate: '1 medium', estimated_calories: 95, protein_g: 0.5, carbs_g: 25, fat_g: 0.3 },
+  { keywords: ['rice'], food_name: 'Rice Meal', serving_estimate: '1 bowl', estimated_calories: 260, protein_g: 5, carbs_g: 52, fat_g: 1 },
+  { keywords: ['paneer'], food_name: 'Paneer Curry', serving_estimate: '1 serving', estimated_calories: 360, protein_g: 18, carbs_g: 12, fat_g: 24 },
+  { keywords: ['chicken'], food_name: 'Chicken Curry', serving_estimate: '1 serving', estimated_calories: 340, protein_g: 30, carbs_g: 10, fat_g: 18 },
+  { keywords: ['noodles'], food_name: 'Noodles', serving_estimate: '1 bowl', estimated_calories: 380, protein_g: 10, carbs_g: 56, fat_g: 12 }
+];
+
 document.addEventListener('DOMContentLoaded', () => {
   wireScannerActions();
   renderScanHistory();
@@ -152,7 +167,7 @@ function normalizeApiAnalysis(response) {
     throw new Error('Scanner response was empty.');
   }
 
-  return {
+  const normalized = {
     food_name: analysis.food_name || analysis.name || 'Detected Meal',
     serving_estimate: analysis.serving_estimate || analysis.serving || '1 serving',
     estimated_calories: Number(analysis.estimated_calories ?? analysis.calories ?? 0),
@@ -163,6 +178,8 @@ function normalizeApiAnalysis(response) {
     notes: Array.isArray(analysis.notes) ? analysis.notes : [],
     feedback: analysis.feedback || 'Balanced meal estimate ready.',
   };
+
+  return refineAnalysisWithLibrary(normalized);
 }
 
 async function addCurrentAnalysisToMealLog() {
@@ -321,6 +338,59 @@ function metricCardMarkup(label, value) {
       <div class="stat-value scanner-metric-value">${value}</div>
     </div>
   `;
+}
+
+function refineAnalysisWithLibrary(analysis) {
+  const profile = getCachedProfile();
+  const goal = profile?.fitness_goal || 'maintenance';
+  const hint = document.getElementById('manual-food-hint')?.value?.trim().toLowerCase() || '';
+  const candidate = `${analysis.food_name} ${hint}`.toLowerCase();
+  const match = NUTRITION_LIBRARY.find((item) => item.keywords.some((keyword) => candidate.includes(keyword)));
+
+  const enriched = match ? applyNutritionLibraryMatch(analysis, match) : { ...analysis };
+  enriched.feedback = buildGoalAwareFeedback(enriched, goal);
+  return enriched;
+}
+
+function applyNutritionLibraryMatch(analysis, match) {
+  const looksGeneric = analysis.estimated_calories <= 0
+    || analysis.food_name === 'Detected Meal'
+    || analysis.confidence === 'Estimated';
+
+  const merged = {
+    ...analysis,
+    food_name: looksGeneric ? match.food_name : analysis.food_name,
+    serving_estimate: analysis.serving_estimate === '1 serving' ? match.serving_estimate : analysis.serving_estimate,
+    estimated_calories: looksGeneric ? match.estimated_calories : analysis.estimated_calories,
+    protein_g: looksGeneric ? match.protein_g : analysis.protein_g,
+    carbs_g: looksGeneric ? match.carbs_g : analysis.carbs_g,
+    fat_g: looksGeneric ? match.fat_g : analysis.fat_g,
+    notes: [...(analysis.notes || []), `Nutrition refined using known food profile for ${match.food_name}.`]
+  };
+
+  if (looksGeneric) {
+    merged.feedback = `Estimated using your meal hint and known nutrition data for ${match.food_name}.`;
+  }
+
+  return merged;
+}
+
+function buildGoalAwareFeedback(analysis, goal) {
+  if (goal === 'weight_loss') {
+    return analysis.estimated_calories > 450
+      ? 'This looks calorie-dense for a fat-loss goal. Balance it with protein, vegetables, and a lighter next meal.'
+      : 'This fits a fat-loss goal better when paired with steady protein and portion control.';
+  }
+
+  if (goal === 'muscle_gain') {
+    return analysis.protein_g >= 20
+      ? 'Good protein support for muscle gain. Pair this with hydration and a balanced carb source.'
+      : 'For muscle gain, consider adding a little more protein such as eggs, paneer, chicken, or curd.';
+  }
+
+  return analysis.estimated_calories <= 350
+    ? 'This looks like a lighter balanced meal. Keep variety and hydration consistent through the day.'
+    : 'This meal is workable for maintenance when balanced with activity and lighter meals later in the day.';
 }
 
 function escapeHtml(str) {
