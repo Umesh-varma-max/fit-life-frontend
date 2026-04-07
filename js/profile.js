@@ -1,11 +1,13 @@
 let currentStep = 1;
 const totalSteps = 6;
 let heightUnit = 'cm';
+let hasSavedProfile = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   setupStepNavigation();
   setupNumericControls();
   setupHeightUnitToggle();
+  setupProfileModeControls();
   loadExistingProfile();
   syncAllDisplays();
 });
@@ -41,6 +43,26 @@ function setupStepNavigation() {
   });
 }
 
+function setupProfileModeControls() {
+  document.getElementById('edit-profile-btn')?.addEventListener('click', () => {
+    showProfileEditor();
+  });
+
+  document.getElementById('back-dashboard-btn')?.addEventListener('click', () => {
+    window.location.href = 'dashboard.html';
+  });
+
+  document.getElementById('profile-mode-btn')?.addEventListener('click', () => {
+    if (hasSavedProfile && !isEditorVisible()) {
+      showProfileEditor();
+      return;
+    }
+    if (hasSavedProfile) {
+      showProfileSummary();
+    }
+  });
+}
+
 function goToStep(step) {
   if (step < 1 || step > totalSteps) return;
 
@@ -56,6 +78,34 @@ function goToStep(step) {
   const prevTop = document.getElementById('prev-btn');
   if (prevTop) {
     prevTop.style.visibility = currentStep === 1 ? 'hidden' : 'visible';
+  }
+}
+
+function isEditorVisible() {
+  return !document.getElementById('profile-form')?.classList.contains('onboarding-hidden');
+}
+
+function showProfileSummary() {
+  document.getElementById('profile-summary')?.classList.remove('onboarding-hidden');
+  document.getElementById('profile-form')?.classList.add('onboarding-hidden');
+  document.getElementById('screen-label').textContent = 'Health Profile';
+  document.getElementById('prev-btn').style.visibility = 'hidden';
+  const modeBtn = document.getElementById('profile-mode-btn');
+  if (modeBtn) {
+    modeBtn.classList.remove('onboarding-hidden');
+    modeBtn.textContent = 'Edit';
+  }
+}
+
+function showProfileEditor() {
+  document.getElementById('profile-summary')?.classList.add('onboarding-hidden');
+  document.getElementById('profile-form')?.classList.remove('onboarding-hidden');
+  document.getElementById('screen-label').textContent = document.getElementById(`step-${currentStep}`)?.dataset.label || 'Profile Setup';
+  document.getElementById('prev-btn').style.visibility = currentStep === 1 ? 'hidden' : 'visible';
+  const modeBtn = document.getElementById('profile-mode-btn');
+  if (modeBtn) {
+    modeBtn.classList.remove('onboarding-hidden');
+    modeBtn.textContent = 'Done';
   }
 }
 
@@ -212,6 +262,7 @@ async function loadExistingProfile() {
   try {
     const data = await profileAPI.get();
     const profile = data.profile;
+    hasSavedProfile = true;
 
     cacheProfile({
       ...profile,
@@ -247,10 +298,17 @@ async function loadExistingProfile() {
     if (goalRadio) goalRadio.checked = true;
 
     syncAllDisplays();
+    renderProfileSummary({
+      ...profile,
+      bmi: profile.bmi ?? data.bmi,
+      daily_calories: profile.daily_calories ?? data.daily_calories
+    });
+    showProfileSummary();
   } catch (error) {
     if (error.status !== 404) {
       console.error('Failed to load profile:', error);
     }
+    showProfileEditor();
   }
 }
 
@@ -274,10 +332,16 @@ async function saveProfile() {
       bmi: data.bmi,
       daily_calories: data.daily_calories
     });
+    hasSavedProfile = true;
+    renderProfileSummary({
+      ...body,
+      bmi: data.bmi,
+      daily_calories: data.daily_calories
+    });
     showToast(`Profile saved! BMI: ${data.bmi} · Daily Calories: ${data.daily_calories} kcal`, 'success', 4000);
     setTimeout(() => {
-      window.location.href = 'dashboard.html';
-    }, 900);
+      showProfileSummary();
+    }, 500);
   } catch (error) {
     if (error.errors) {
       Object.entries(error.errors).forEach(([field, messages]) => {
@@ -297,4 +361,26 @@ async function saveProfile() {
 function setText(id, value) {
   const element = document.getElementById(id);
   if (element) element.textContent = String(value);
+}
+
+function renderProfileSummary(profile) {
+  setText('summary-bmi', profile.bmi ? Number(profile.bmi).toFixed(1) : '--');
+  setText('summary-bmi-label', profile.bmi ? getBMICategory(profile.bmi).label : 'BMI');
+  setText('summary-goal', formatEnumLabel(profile.fitness_goal || 'maintenance'));
+  setText('summary-activity', formatEnumLabel(profile.activity_level || 'moderate'));
+  setText('summary-gender', formatEnumLabel(profile.gender || '--'));
+  setText('summary-age', profile.age ? `${profile.age} years` : '--');
+  setText('summary-weight', profile.weight_kg ? `${Math.round(profile.weight_kg)} kg` : '--');
+  setText('summary-height', profile.height_cm ? `${Math.round(profile.height_cm)} cm` : '--');
+  setText('summary-calories', profile.daily_calories ? `${formatNumber(Number(profile.daily_calories))} kcal` : '--');
+
+  const goalCopy = document.getElementById('summary-goal-copy');
+  if (goalCopy) {
+    const copyMap = {
+      weight_loss: 'Lean meals and steady movement plans are tuned for fat loss.',
+      muscle_gain: 'Protein-first meals and strength routines are tuned for muscle gain.',
+      maintenance: 'Balanced workouts and recovery guidance are tuned for everyday fitness.'
+    };
+    goalCopy.textContent = copyMap[profile.fitness_goal] || copyMap.maintenance;
+  }
 }
