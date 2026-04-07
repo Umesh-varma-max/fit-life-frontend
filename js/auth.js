@@ -1,16 +1,35 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const token = localStorage.getItem(CONFIG.TOKEN_KEY);
-  if (token) {
-    window.location.replace('dashboard.html');
-    return;
-  }
-
   setupAuthEntrySheet();
+  setupWelcomeState();
   setupPasswordToggles();
   setupLoginForm();
   setupRegisterForm();
   setupPasswordStrength();
 });
+
+function setupWelcomeState() {
+  const cta = document.getElementById('open-login');
+  const logoutBtn = document.getElementById('welcome-logout');
+  const hasSession = Boolean(getToken() && getUser());
+  if (!cta) return;
+
+  if (hasSession) {
+    cta.textContent = 'Continue to Dashboard';
+    logoutBtn?.classList.remove('onboarding-hidden');
+    cta.addEventListener('click', () => {
+      window.location.href = 'dashboard.html';
+    });
+    logoutBtn?.addEventListener('click', async () => {
+      try { await authAPI.logout(); } catch (_) {}
+      clearStoredSession();
+      showToast('Logged out successfully', 'success');
+      window.location.replace('index.html');
+    });
+    return;
+  }
+
+  cta.textContent = 'Get Started';
+}
 
 function setupAuthEntrySheet() {
   const shell = document.getElementById('welcome-shell');
@@ -30,6 +49,7 @@ function setupAuthEntrySheet() {
   };
 
   openBtn?.addEventListener('click', () => {
+    if (getToken() && getUser()) return;
     setLoginMode(true);
     document.getElementById('login-email')?.focus();
   });
@@ -42,6 +62,7 @@ function setupAuthEntrySheet() {
   });
 
   if (params.get('login') === '1') {
+    if (getToken() && getUser()) return;
     shell.classList.add('auth-force-login');
     document.getElementById('login-email')?.focus();
   }

@@ -52,9 +52,8 @@ function setupSidebar() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       try { await authAPI.logout(); } catch (_) {}
-      localStorage.removeItem(CONFIG.TOKEN_KEY);
-      localStorage.removeItem(CONFIG.USER_KEY);
-      window.location.href = 'index.html';
+      clearStoredSession();
+      window.location.replace('index.html');
     });
   }
 }

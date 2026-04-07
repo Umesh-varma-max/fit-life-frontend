@@ -94,6 +94,18 @@
   transform: translateY(-1px);
 }
 
+.welcome-secondary-cta {
+  min-height: 54px;
+  width: 100%;
+  margin-top: 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+}
+
 .auth-entry-sheet {
   position: fixed;
   inset: auto 0 0;

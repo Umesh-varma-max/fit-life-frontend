@@ -25,6 +25,15 @@ function cacheProfile(profile) {
   localStorage.setItem(CONFIG.PROFILE_CACHE_KEY, JSON.stringify(profile));
 }
 
+function clearStoredSession() {
+  [
+    CONFIG.TOKEN_KEY,
+    CONFIG.USER_KEY,
+    CONFIG.PROFILE_CACHE_KEY,
+    CONFIG.AI_CHAT_HISTORY_KEY
+  ].forEach((key) => localStorage.removeItem(key));
+}
+
 async function parseApiResponse(response) {
   if (response.status === 204) {
     return {};
@@ -63,9 +72,8 @@ async function apiFetch(endpoint, options = {}) {
   }
 
   if (response.status === 401) {
-    localStorage.removeItem(CONFIG.TOKEN_KEY);
-    localStorage.removeItem(CONFIG.USER_KEY);
-    window.location.href = 'index.html';
+    clearStoredSession();
+    window.location.replace('index.html');
     return;
   }
 
@@ -99,9 +107,8 @@ async function apiFetchForm(endpoint, formData, options = {}) {
   }
 
   if (response.status === 401) {
-    localStorage.removeItem(CONFIG.TOKEN_KEY);
-    localStorage.removeItem(CONFIG.USER_KEY);
-    window.location.href = 'index.html';
+    clearStoredSession();
+    window.location.replace('index.html');
     return;
   }
 
