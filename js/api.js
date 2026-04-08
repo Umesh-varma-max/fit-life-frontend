@@ -4,6 +4,25 @@ function getToken() {
   return localStorage.getItem(CONFIG.TOKEN_KEY);
 }
 
+function decodeJwtPayload(token) {
+  try {
+    const [, payload] = String(token || '').split('.');
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function isTokenValid(token = getToken()) {
+  if (!token) return false;
+  const payload = decodeJwtPayload(token);
+  if (!payload || !payload.exp) return false;
+  return (payload.exp * 1000) > Date.now();
+}
+
 function getUser() {
   try {
     return JSON.parse(localStorage.getItem(CONFIG.USER_KEY));
@@ -68,7 +87,13 @@ function getPostLoginDestination(fallback = 'dashboard.html') {
 }
 
 function hasStoredSession() {
-  return Boolean(getToken());
+  const token = getToken();
+  if (!token) return false;
+  if (!isTokenValid(token)) {
+    clearStoredSession();
+    return false;
+  }
+  return true;
 }
 
 async function parseApiResponse(response) {

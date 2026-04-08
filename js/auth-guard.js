@@ -4,10 +4,9 @@
 // ──────────────────────────────────────────────────
 
 (function () {
-  const token = localStorage.getItem(CONFIG.TOKEN_KEY);
   const currentPath = `${window.location.pathname.split('/').pop() || 'dashboard.html'}${window.location.search || ''}${window.location.hash || ''}`;
 
-  if (!token) {
+  if (!hasStoredSession()) {
     window.location.replace('index.html?login=1');
     return;
   }
