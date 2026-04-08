@@ -86,8 +86,8 @@
               </div>
               <div class="form-group">
                 <label class="form-label" for="manual-food-hint">Optional Food Hint</label>
-                <input id="manual-food-hint" type="text" class="form-input" placeholder="e.g. biryani, salad bowl">
-                <p class="form-help scanner-hint-copy">Helpful for packaged foods, cakes, drinks, and unclear labels.</p>
+                <input id="manual-food-hint" type="text" class="form-input" placeholder="e.g. bread, milkybar, kitkat, layerz cake, lays">
+                <p class="form-help scanner-hint-copy">Helpful for packaged foods, cakes, drinks, and unclear labels. Add the brand or package name when needed.</p>
               </div>
             </div>
           </div>
@@ -202,6 +202,26 @@
             <div class="scanner-ingredients mt-2">
               <div class="scanner-feedback-label">Analysis Notes</div>
               <div id="analysis-tags" class="exercise-inline-meta"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="analysis-error-card" class="card hidden">
+          <div class="card-header">
+            <span class="card-title">Scan Review</span>
+            <span class="badge badge-warning">Needs Retry</span>
+          </div>
+          <div class="card-body">
+            <div class="scanner-error-card">
+              <div class="scanner-error-icon">AI</div>
+              <div>
+                <h3 id="analysis-error-title" class="section-title">We could not identify this food yet</h3>
+                <p id="analysis-error-message" class="section-subtitle">Try a clearer photo or add a food hint.</p>
+              </div>
+            </div>
+            <ul id="analysis-error-meta" class="scanner-warning-list mt-2"></ul>
+            <div class="scanner-error-actions mt-2">
+              <button id="retry-with-hint-btn" class="btn btn-primary">Retry with Food Hint</button>
             </div>
           </div>
         </section>

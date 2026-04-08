@@ -1,10 +1,21 @@
 const SCAN_HISTORY_KEY = 'fitlife_scan_history';
 const MAX_HISTORY_ITEMS = 12;
 
+const SCANNER_STATES = {
+  IDLE: 'idle',
+  CAMERA: 'camera',
+  PREVIEW: 'preview',
+  ANALYZING: 'analyzing',
+  RESULT: 'result',
+  ERROR: 'error'
+};
+
 let currentStream = null;
 let currentFile = null;
+let currentPreviewUrl = '';
 let latestAnalysis = null;
 let latestRawAnalysis = null;
+let scannerState = SCANNER_STATES.IDLE;
 
 const NUTRITION_LIBRARY = [
   { keywords: ['biryani'], food_name: 'Chicken Biryani', serving_estimate: '1 plate', estimated_calories: 620, protein_g: 26, carbs_g: 68, fat_g: 24 },
@@ -18,13 +29,17 @@ const NUTRITION_LIBRARY = [
   { keywords: ['rice'], food_name: 'Rice Meal', serving_estimate: '1 bowl', estimated_calories: 260, protein_g: 5, carbs_g: 52, fat_g: 1 },
   { keywords: ['paneer'], food_name: 'Paneer Curry', serving_estimate: '1 serving', estimated_calories: 360, protein_g: 18, carbs_g: 12, fat_g: 24 },
   { keywords: ['chicken'], food_name: 'Chicken Curry', serving_estimate: '1 serving', estimated_calories: 340, protein_g: 30, carbs_g: 10, fat_g: 18 },
-  { keywords: ['noodles'], food_name: 'Noodles', serving_estimate: '1 bowl', estimated_calories: 380, protein_g: 10, carbs_g: 56, fat_g: 12 }
+  { keywords: ['noodles'], food_name: 'Noodles', serving_estimate: '1 bowl', estimated_calories: 380, protein_g: 10, carbs_g: 56, fat_g: 12 },
+  { keywords: ['milkybar'], food_name: 'Milkybar', serving_estimate: '1 bar', estimated_calories: 129, protein_g: 1.8, carbs_g: 14.5, fat_g: 7.1 },
+  { keywords: ['kitkat'], food_name: 'KitKat', serving_estimate: '1 bar', estimated_calories: 104, protein_g: 1.5, carbs_g: 13.2, fat_g: 5.1 },
+  { keywords: ['lays', 'chips'], food_name: 'Potato Chips', serving_estimate: '1 pack', estimated_calories: 160, protein_g: 2, carbs_g: 15, fat_g: 10 },
+  { keywords: ['cake', 'layerz'], food_name: 'Layer Cake', serving_estimate: '1 piece', estimated_calories: 280, protein_g: 3.8, carbs_g: 34, fat_g: 14 }
 ];
 
 document.addEventListener('DOMContentLoaded', () => {
   wireScannerActions();
   renderScanHistory();
-  applyScannerState('idle');
+  applyScannerState(SCANNER_STATES.IDLE);
 });
 
 function wireScannerActions() {
@@ -37,16 +52,18 @@ function wireScannerActions() {
   const analyzePhotoBtn = document.getElementById('analyze-photo-btn');
   const resetScannerBtn = document.getElementById('reset-scanner-btn');
   const logMealBtn = document.getElementById('log-meal-btn');
+  const retryHintBtn = document.getElementById('retry-with-hint-btn');
 
   openCameraBtn?.addEventListener('click', startCamera);
   uploadPhotoBtn?.addEventListener('click', () => fileInput?.click());
   fileInput?.addEventListener('change', handleFileSelect);
   cancelCameraBtn?.addEventListener('click', resetScanner);
-  retakePhotoBtn?.addEventListener('click', clearPreview);
+  retakePhotoBtn?.addEventListener('click', () => applyScannerState(SCANNER_STATES.PREVIEW));
   capturePhotoBtn?.addEventListener('click', capturePhoto);
   analyzePhotoBtn?.addEventListener('click', analyzeCurrentPhoto);
   resetScannerBtn?.addEventListener('click', resetScanner);
   logMealBtn?.addEventListener('click', addCurrentAnalysisToMealLog);
+  retryHintBtn?.addEventListener('click', focusHintAndReturnToPreview);
 }
 
 async function startCamera() {
@@ -57,6 +74,7 @@ async function startCamera() {
 
   stopCamera();
   clearPreview(false);
+  resetResultPanels();
 
   try {
     currentStream = await navigator.mediaDevices.getUserMedia({
@@ -70,17 +88,21 @@ async function startCamera() {
       await video.play();
     }
 
-    applyScannerState('camera');
+    applyScannerState(SCANNER_STATES.CAMERA);
   } catch (error) {
     console.error('Camera start failed', error);
-    showToast('Unable to access camera. Try photo upload instead.', 'error');
-    applyScannerState('idle');
+    renderScanError({
+      message: 'Unable to access the camera. You can still upload an image to scan your food.',
+      provider_error: '',
+      provider_notes: ['Try photo upload if camera permission is blocked on this device.']
+    });
+    applyScannerState(SCANNER_STATES.ERROR);
   }
 }
 
 function stopCamera() {
   if (!currentStream) return;
-  currentStream.getTracks().forEach(track => track.stop());
+  currentStream.getTracks().forEach((track) => track.stop());
   currentStream = null;
 }
 
@@ -119,15 +141,27 @@ function capturePhoto() {
 function previewFile(file) {
   currentFile = file;
   latestAnalysis = null;
-  hideAnalysisCard();
+  latestRawAnalysis = null;
+  resetResultPanels();
   stopCamera();
+  setPreviewImage(file);
+  applyScannerState(SCANNER_STATES.PREVIEW);
+}
 
+function setPreviewImage(file) {
+  revokePreviewUrl();
+  currentPreviewUrl = URL.createObjectURL(file);
   const previewImage = document.getElementById('preview-image');
   if (previewImage) {
-    previewImage.src = URL.createObjectURL(file);
+    previewImage.src = currentPreviewUrl;
   }
+}
 
-  applyScannerState('preview');
+function revokePreviewUrl() {
+  if (currentPreviewUrl) {
+    URL.revokeObjectURL(currentPreviewUrl);
+    currentPreviewUrl = '';
+  }
 }
 
 async function analyzeCurrentPhoto() {
@@ -136,30 +170,49 @@ async function analyzeCurrentPhoto() {
     return;
   }
 
-  const formData = new FormData();
-  formData.append('photo', currentFile);
-  formData.append('meal_time', document.getElementById('meal-time-select')?.value || 'meal');
-  formData.append('food_hint', document.getElementById('manual-food-hint')?.value?.trim() || '');
-
-  toggleAnalyzing(true);
+  resetResultPanels();
+  applyScannerState(SCANNER_STATES.ANALYZING);
   setLoading('analyze-photo-btn', true);
 
   try {
-    const response = await foodAPI.analyzePhoto(formData);
+    const response = await foodAPI.analyzePhoto(buildAnalyzeFormData());
     const analysis = normalizeApiAnalysis(response);
     latestRawAnalysis = response;
     latestAnalysis = analysis;
     renderAnalysis(analysis);
-    persistScanHistory(analysis, document.getElementById('preview-image')?.src || '');
+    persistScanHistory(analysis, currentPreviewUrl || document.getElementById('preview-image')?.src || '');
     renderScanHistory();
+    applyScannerState(SCANNER_STATES.RESULT);
     showToast('Meal analyzed successfully', 'success');
   } catch (error) {
     console.error('Analyze photo failed', error);
-    showToast(error.message || 'Could not analyze that meal photo', 'error');
+    renderScanError({
+      message: error.message || 'Could not analyze that meal photo',
+      provider_error: error.payload?.provider_error || '',
+      provider_notes: normalizeProviderNotes(error.payload?.provider_notes),
+      status: error.status
+    });
+    if (error.status === 422) {
+      focusHintField();
+    }
+    applyScannerState(SCANNER_STATES.ERROR);
   } finally {
-    toggleAnalyzing(false);
     setLoading('analyze-photo-btn', false);
   }
+}
+
+function buildAnalyzeFormData(extraFlags = {}) {
+  const formData = new FormData();
+  formData.append('photo', currentFile);
+  formData.append('meal_time', document.getElementById('meal-time-select')?.value || 'meal');
+  formData.append('food_hint', document.getElementById('manual-food-hint')?.value?.trim() || '');
+  formData.append('log_date', todayDate());
+
+  Object.entries(extraFlags).forEach(([key, value]) => {
+    formData.append(key, String(value));
+  });
+
+  return formData;
 }
 
 function normalizeApiAnalysis(response) {
@@ -220,42 +273,50 @@ function normalizeScanRecovery(scanRecovery) {
 }
 
 async function addCurrentAnalysisToMealLog() {
-  if (!latestAnalysis) {
+  if (!latestAnalysis || !currentFile) {
     showToast('Analyze a meal first', 'warning');
+    return;
+  }
+
+  const shouldReview = Boolean(latestAnalysis.scan_recovery?.needs_user_confirmation);
+  const hint = document.getElementById('manual-food-hint')?.value?.trim() || '';
+  if (shouldReview && !hint) {
+    showToast('Add an Optional Food Hint before logging this scan.', 'warning');
+    focusHintField();
     return;
   }
 
   setLoading('log-meal-btn', true);
   try {
-    const hint = document.getElementById('manual-food-hint')?.value?.trim() || '';
-    const mealTime = document.getElementById('meal-time-select')?.value || 'meal';
-    const shouldReview = Boolean(latestAnalysis.scan_recovery?.needs_user_confirmation);
+    const response = await foodAPI.analyzePhoto(buildAnalyzeFormData({
+      auto_log: true,
+      log_meal: true,
+      mark_as_eaten: true
+    }));
 
-    if (shouldReview && !hint) {
-      showToast('Add a food hint first so we can confirm the scan before logging.', 'warning');
-      document.getElementById('manual-food-hint')?.focus();
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('photo', currentFile);
-    formData.append('meal_time', mealTime);
-    formData.append('food_hint', hint);
-    formData.append('log_date', todayDate());
-    formData.append('log_meal', 'true');
-    formData.append('mark_as_eaten', 'true');
-
-    const response = await foodAPI.analyzePhoto(formData);
     const analysis = normalizeApiAnalysis(response);
     latestRawAnalysis = response;
     latestAnalysis = analysis;
     renderAnalysis(analysis);
+    applyScannerState(SCANNER_STATES.RESULT);
 
-    const successMessage = shouldReview ? 'Scan confirmed and meal logged' : 'Added to meal log';
-    showToast(successMessage, 'success');
+    if (response?.meal_log) {
+      window.dispatchEvent(new CustomEvent('fitlife:meal-logged', { detail: response.meal_log }));
+    }
+
+    showToast(response?.message || 'Meal logged successfully', 'success');
   } catch (error) {
     console.error('Meal log failed', error);
-    showToast(error.message || 'Failed to log meal', 'error');
+    renderScanError({
+      message: error.message || 'Failed to log meal from scan',
+      provider_error: error.payload?.provider_error || '',
+      provider_notes: normalizeProviderNotes(error.payload?.provider_notes),
+      status: error.status
+    });
+    if (error.status === 422) {
+      focusHintField();
+    }
+    applyScannerState(SCANNER_STATES.ERROR);
   } finally {
     setLoading('log-meal-btn', false);
   }
@@ -269,23 +330,14 @@ function renderAnalysis(analysis) {
   const macroGrid = document.getElementById('analysis-macro-grid');
   const feedback = document.getElementById('analysis-feedback');
   const tags = document.getElementById('analysis-tags');
-  const warningCard = document.getElementById('analysis-diet-warning');
-  const warningLabel = document.getElementById('analysis-warning-label');
-  const warningBadge = document.getElementById('analysis-warning-badge');
-  const warningTitle = document.getElementById('analysis-warning-title');
-  const warningMessage = document.getElementById('analysis-warning-message');
-  const warningIssues = document.getElementById('analysis-warning-issues');
-  const recoveryCard = document.getElementById('analysis-scan-recovery');
-  const recoveryLabel = document.getElementById('analysis-recovery-label');
-  const recoveryBadge = document.getElementById('analysis-recovery-badge');
-  const recoveryTitle = document.getElementById('analysis-recovery-title');
-  const recoveryMessage = document.getElementById('analysis-recovery-message');
-  const recoverySuggestions = document.getElementById('analysis-recovery-suggestions');
   const logMealBtn = document.getElementById('log-meal-btn');
 
   if (foodName) foodName.textContent = analysis.food_name || 'Detected Meal';
   if (serving) serving.textContent = analysis.serving_estimate || '1 serving';
-  if (confidence) confidence.textContent = analysis.confidence || 'Estimated';
+  if (confidence) {
+    confidence.textContent = formatConfidence(analysis.confidence);
+    confidence.className = `badge ${needsReviewBadge(analysis) ? 'badge-warning' : 'badge-accent'}`;
+  }
   if (feedback) feedback.textContent = analysis.feedback || 'Balanced meal estimate ready.';
   if (logMealBtn) {
     logMealBtn.textContent = analysis.scan_recovery?.needs_user_confirmation ? 'Review & Mark as Eaten' : 'Add to Meal Log';
@@ -293,56 +345,42 @@ function renderAnalysis(analysis) {
 
   if (macroGrid) {
     macroGrid.innerHTML = [
-      metricCardMarkup('Calories', `${Math.round(analysis.estimated_calories || 0)} kcal`),
+      metricCardMarkup('Calories', `${Math.round(analysis.estimated_calories || 0)} kcal`, 'scanner-metric-primary'),
       metricCardMarkup('Protein', `${Number(analysis.protein_g || 0).toFixed(1)} g`),
       metricCardMarkup('Carbs', `${Number(analysis.carbs_g || 0).toFixed(1)} g`),
-      metricCardMarkup('Fat', `${Number(analysis.fat_g || 0).toFixed(1)} g`)
+      metricCardMarkup('Fats', `${Number(analysis.fat_g || 0).toFixed(1)} g`)
     ].join('');
   }
 
-  const noteItems = (analysis.notes || []).slice(0, 5);
   const providerNotes = (analysis.provider_notes || []).slice(0, 3);
+  const noteItems = (analysis.notes || []).slice(0, 4);
   if (tags) {
     const combinedNotes = [
       ...(analysis.source ? [`Source: ${analysis.source}`] : []),
       ...providerNotes,
-      ...(analysis.provider_error ? [`Provider note: ${analysis.provider_error}`] : []),
+      ...(analysis.provider_error ? [`Provider: ${analysis.provider_error}`] : []),
       ...noteItems
     ].slice(0, 6);
+
     tags.innerHTML = combinedNotes.length
-      ? combinedNotes.map(item => `<span class="badge badge-info">${escapeHtml(item)}</span>`).join('')
-      : '<span class="text-muted">No additional notes.</span>';
+      ? combinedNotes.map((item) => `<span class="badge badge-info">${escapeHtml(item)}</span>`).join('')
+      : '<span class="text-muted">No additional scan notes.</span>';
   }
 
-  renderScanRecovery(analysis.scan_recovery, {
-    recoveryCard,
-    recoveryLabel,
-    recoveryBadge,
-    recoveryTitle,
-    recoveryMessage,
-    recoverySuggestions
-  });
-
-  renderDietWarning(analysis.diet_warning, {
-    warningCard,
-    warningLabel,
-    warningBadge,
-    warningTitle,
-    warningMessage,
-    warningIssues
-  });
-
+  renderScanRecovery(analysis.scan_recovery);
+  renderDietWarning(analysis.diet_warning);
+  hideScanError();
   resultCard?.classList.remove('hidden');
 }
 
-function hideAnalysisCard() {
-  document.getElementById('analysis-result-card')?.classList.add('hidden');
-  document.getElementById('analysis-scan-recovery')?.classList.add('hidden');
-  document.getElementById('analysis-diet-warning')?.classList.add('hidden');
-}
+function renderScanRecovery(scanRecovery) {
+  const recoveryCard = document.getElementById('analysis-scan-recovery');
+  const recoveryLabel = document.getElementById('analysis-recovery-label');
+  const recoveryBadge = document.getElementById('analysis-recovery-badge');
+  const recoveryTitle = document.getElementById('analysis-recovery-title');
+  const recoveryMessage = document.getElementById('analysis-recovery-message');
+  const recoverySuggestions = document.getElementById('analysis-recovery-suggestions');
 
-function renderScanRecovery(scanRecovery, elements) {
-  const { recoveryCard, recoveryLabel, recoveryBadge, recoveryTitle, recoveryMessage, recoverySuggestions } = elements;
   if (!recoveryCard || !recoveryLabel || !recoveryBadge || !recoveryTitle || !recoveryMessage || !recoverySuggestions) return;
 
   if (!scanRecovery) {
@@ -353,11 +391,13 @@ function renderScanRecovery(scanRecovery, elements) {
   const needsReview = Boolean(scanRecovery.needs_user_confirmation);
   recoveryCard.classList.remove('hidden', 'scanner-warning-card-neutral', 'scanner-warning-card-alert', 'scanner-warning-card-success');
   recoveryCard.classList.add(needsReview ? 'scanner-warning-card-alert' : 'scanner-warning-card-neutral');
-  recoveryLabel.textContent = needsReview ? 'Review Scan' : 'Scan Source';
-  recoveryBadge.textContent = needsReview ? 'Needs confirmation' : (scanRecovery.provider_source || 'recognized');
+  recoveryLabel.textContent = needsReview ? 'Review Before Logging' : 'Scan Source';
+  recoveryBadge.textContent = needsReview ? 'Needs confirmation' : (scanRecovery.provider_source || 'scanner');
   recoveryBadge.className = `badge ${needsReview ? 'badge-warning' : 'badge-info'}`;
-  recoveryTitle.textContent = needsReview ? 'Add a food hint before logging this meal' : 'Scan completed successfully';
-  recoveryMessage.textContent = buildRecoveryMessage(scanRecovery);
+  recoveryTitle.textContent = needsReview ? 'This scan needs a quick confirmation' : 'Scan source details';
+  recoveryMessage.textContent = needsReview
+    ? 'Add an Optional Food Hint and scan again if this is a packaged food or the label is unclear.'
+    : `Provider source: ${scanRecovery.provider_source || 'scanner'}${scanRecovery.recommended_action ? ` · ${scanRecovery.recommended_action}` : ''}`;
 
   if (scanRecovery.suggested_hints.length) {
     recoverySuggestions.innerHTML = scanRecovery.suggested_hints.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
@@ -368,16 +408,14 @@ function renderScanRecovery(scanRecovery, elements) {
   }
 }
 
-function buildRecoveryMessage(scanRecovery) {
-  if (scanRecovery.needs_user_confirmation) {
-    return 'This scan needs a quick review before logging. Add an Optional Food Hint, especially for packaged foods, labels, or unclear images.';
-  }
+function renderDietWarning(dietWarning) {
+  const warningCard = document.getElementById('analysis-diet-warning');
+  const warningLabel = document.getElementById('analysis-warning-label');
+  const warningBadge = document.getElementById('analysis-warning-badge');
+  const warningTitle = document.getElementById('analysis-warning-title');
+  const warningMessage = document.getElementById('analysis-warning-message');
+  const warningIssues = document.getElementById('analysis-warning-issues');
 
-  return `Source: ${scanRecovery.provider_source || 'scanner'}${scanRecovery.recommended_action ? ` · Action: ${scanRecovery.recommended_action}` : ''}`;
-}
-
-function renderDietWarning(dietWarning, elements) {
-  const { warningCard, warningLabel, warningBadge, warningTitle, warningMessage, warningIssues } = elements;
   if (!warningCard || !warningLabel || !warningBadge || !warningTitle || !warningMessage || !warningIssues) return;
 
   if (!dietWarning) {
@@ -404,6 +442,45 @@ function renderDietWarning(dietWarning, elements) {
   }
 }
 
+function renderScanError(errorInfo) {
+  const errorCard = document.getElementById('analysis-error-card');
+  const errorTitle = document.getElementById('analysis-error-title');
+  const errorMessage = document.getElementById('analysis-error-message');
+  const errorMeta = document.getElementById('analysis-error-meta');
+
+  hideAnalysisCard();
+
+  if (!errorCard || !errorTitle || !errorMessage || !errorMeta) return;
+
+  errorCard.classList.remove('hidden');
+  errorTitle.textContent = errorInfo.status === 422 ? 'We could not confidently identify this food' : 'Scanner needs another try';
+  errorMessage.textContent = errorInfo.message || 'Please retry with a clearer image.';
+
+  const metaItems = [
+    ...(errorInfo.provider_error ? [`Provider: ${errorInfo.provider_error}`] : []),
+    ...((errorInfo.provider_notes || []).slice(0, 4))
+  ];
+
+  errorMeta.innerHTML = metaItems.length
+    ? metaItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')
+    : '<li>Try a clearer image, capture the package name, or add a food hint like milkybar, kitkat, layerz cake, or lays.</li>';
+}
+
+function hideScanError() {
+  document.getElementById('analysis-error-card')?.classList.add('hidden');
+}
+
+function hideAnalysisCard() {
+  document.getElementById('analysis-result-card')?.classList.add('hidden');
+  document.getElementById('analysis-scan-recovery')?.classList.add('hidden');
+  document.getElementById('analysis-diet-warning')?.classList.add('hidden');
+}
+
+function resetResultPanels() {
+  hideAnalysisCard();
+  hideScanError();
+}
+
 function renderScanHistory() {
   const container = document.getElementById('scan-history-list');
   const count = document.getElementById('history-count');
@@ -417,19 +494,21 @@ function renderScanHistory() {
       <div class="empty-state">
         <div class="empty-state-icon">Scan</div>
         <div class="empty-state-title">No scans yet</div>
-        <p class="empty-state-text">Your recent photo scans will show up here.</p>
+        <p class="empty-state-text">Your recent AI food scans will show up here.</p>
       </div>
     `;
     return;
   }
 
-  container.innerHTML = history.map(item => `
-    <article class="scan-history-card">
-      <img src="${item.preview}" alt="${escapeHtml(item.food_name)}" class="scan-history-image">
-      <div class="scan-history-copy">
-        <div class="scan-history-title">${escapeHtml(item.food_name)}</div>
-        <div class="scan-history-meta">${Math.round(item.estimated_calories || 0)} kcal · ${escapeHtml(item.serving_estimate || '1 serving')}</div>
-        <div class="scan-history-meta">${escapeHtml(item.scanned_at)}</div>
+  container.innerHTML = history.map((item) => `
+    <article class="scanner-history-item">
+      <div class="scanner-history-thumb">
+        <img src="${item.preview}" alt="${escapeHtml(item.food_name)}">
+      </div>
+      <div class="scanner-history-copy">
+        <strong>${escapeHtml(item.food_name)}</strong>
+        <p>${Math.round(item.estimated_calories || 0)} kcal · ${escapeHtml(item.serving_estimate || '1 serving')}</p>
+        <span>${escapeHtml(item.scanned_at)}</span>
       </div>
     </article>
   `).join('');
@@ -458,6 +537,45 @@ function getScanHistory() {
   }
 }
 
+function focusHintAndReturnToPreview() {
+  if (currentFile) {
+    applyScannerState(SCANNER_STATES.PREVIEW);
+  }
+  focusHintField();
+}
+
+function focusHintField() {
+  const hintField = document.getElementById('manual-food-hint');
+  hintField?.focus();
+  hintField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function applyScannerState(state) {
+  scannerState = state;
+  const stage = document.getElementById('scanner-stage');
+  if (stage) {
+    stage.dataset.state = state;
+  }
+
+  const previewShouldShow = [SCANNER_STATES.PREVIEW, SCANNER_STATES.ANALYZING, SCANNER_STATES.RESULT, SCANNER_STATES.ERROR].includes(state);
+  ['idle', 'camera', 'preview'].forEach((name) => {
+    const isActive = name === 'preview' ? previewShouldShow : name === state;
+    document.getElementById(`scanner-${name}`)?.classList.toggle('scanner-panel-active', isActive);
+  });
+
+  document.getElementById('cancel-camera-btn')?.classList.toggle('hidden', state !== SCANNER_STATES.CAMERA);
+  document.getElementById('capture-photo-btn')?.classList.toggle('hidden', state !== SCANNER_STATES.CAMERA);
+  document.getElementById('retake-photo-btn')?.classList.toggle('hidden', !previewShouldShow);
+  document.getElementById('analyze-photo-btn')?.classList.toggle('hidden', ![SCANNER_STATES.PREVIEW, SCANNER_STATES.ERROR].includes(state));
+
+  const resetScannerBtn = document.getElementById('reset-scanner-btn');
+  if (resetScannerBtn) {
+    resetScannerBtn.textContent = state === SCANNER_STATES.RESULT ? 'New Scan' : 'Reset Scanner';
+  }
+
+  toggleAnalyzing(state === SCANNER_STATES.ANALYZING);
+}
+
 function toggleAnalyzing(isAnalyzing) {
   document.getElementById('scanner-analyzing')?.classList.toggle('hidden', !isAnalyzing);
 }
@@ -466,34 +584,23 @@ function clearPreview(resetInput = true) {
   currentFile = null;
   latestAnalysis = null;
   latestRawAnalysis = null;
-  hideAnalysisCard();
-  toggleAnalyzing(false);
+  revokePreviewUrl();
+  resetResultPanels();
   if (resetInput) {
     const fileInput = document.getElementById('food-file-input');
     if (fileInput) fileInput.value = '';
   }
-  applyScannerState('idle');
 }
 
 function resetScanner() {
   stopCamera();
   clearPreview();
+  applyScannerState(SCANNER_STATES.IDLE);
 }
 
-function applyScannerState(state) {
-  ['idle', 'camera', 'preview'].forEach(name => {
-    document.getElementById(`scanner-${name}`)?.classList.toggle('scanner-panel-active', name === state);
-  });
-
-  document.getElementById('cancel-camera-btn')?.classList.toggle('hidden', state !== 'camera');
-  document.getElementById('capture-photo-btn')?.classList.toggle('hidden', state !== 'camera');
-  document.getElementById('retake-photo-btn')?.classList.toggle('hidden', state !== 'preview');
-  document.getElementById('analyze-photo-btn')?.classList.toggle('hidden', state !== 'preview');
-}
-
-function metricCardMarkup(label, value) {
+function metricCardMarkup(label, value, extraClass = '') {
   return `
-    <div class="stat-card scanner-metric-card">
+    <div class="stat-card scanner-stat-card ${extraClass}">
       <div class="stat-label">${label}</div>
       <div class="stat-value scanner-metric-value">${value}</div>
     </div>
@@ -553,10 +660,25 @@ function buildGoalAwareFeedback(analysis, goal) {
     : 'This meal is workable for maintenance when balanced with activity and lighter meals later in the day.';
 }
 
+function needsReviewBadge(analysis) {
+  return Boolean(analysis.scan_recovery?.needs_user_confirmation)
+    || ['db_fallback', 'unresolved'].includes(analysis.scan_recovery?.provider_source);
+}
+
+function formatConfidence(confidence) {
+  if (typeof confidence === 'number') {
+    return `${Math.round(confidence)}% confidence`;
+  }
+  return String(confidence || 'Estimated');
+}
+
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str || '';
   return div.innerHTML;
 }
 
-window.addEventListener('beforeunload', stopCamera);
+window.addEventListener('beforeunload', () => {
+  stopCamera();
+  revokePreviewUrl();
+});
