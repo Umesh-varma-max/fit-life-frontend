@@ -20,9 +20,22 @@ function getCachedProfile() {
   }
 }
 
+function getCachedWorkoutPlan() {
+  try {
+    return JSON.parse(localStorage.getItem(CONFIG.WORKOUT_PLAN_CACHE_KEY));
+  } catch {
+    return null;
+  }
+}
+
 function cacheProfile(profile) {
   if (!profile) return;
   localStorage.setItem(CONFIG.PROFILE_CACHE_KEY, JSON.stringify(profile));
+}
+
+function cacheWorkoutPlan(plan) {
+  if (!plan) return;
+  localStorage.setItem(CONFIG.WORKOUT_PLAN_CACHE_KEY, JSON.stringify(plan));
 }
 
 function clearStoredSession() {
@@ -30,7 +43,8 @@ function clearStoredSession() {
     CONFIG.TOKEN_KEY,
     CONFIG.USER_KEY,
     CONFIG.PROFILE_CACHE_KEY,
-    CONFIG.AI_CHAT_HISTORY_KEY
+    CONFIG.AI_CHAT_HISTORY_KEY,
+    CONFIG.WORKOUT_PLAN_CACHE_KEY
   ].forEach((key) => localStorage.removeItem(key));
 }
 
@@ -139,11 +153,17 @@ const profileAPI = {
   },
   save: async (body) => {
     const data = await apiFetch('/profile', { method: 'POST', body: JSON.stringify(body) });
-    cacheProfile({
+    const cachedProfile = {
       ...body,
       bmi: data.bmi,
-      daily_calories: data.daily_calories
-    });
+      body_fat_percentage: data.body_fat_percentage,
+      body_fat_category: data.body_fat_category,
+      bfp_case: data.body_fat_category,
+      daily_calories: data.daily_calories,
+      goal_label: data.goal_label,
+      activity_label: data.activity_label
+    };
+    cacheProfile(cachedProfile);
     return data;
   }
 };
@@ -168,9 +188,25 @@ const foodAPI = {
 };
 
 const workoutAPI = {
-  getPlan: () => apiFetch('/workout/plan'),
+  getPlan: async () => {
+    const data = await apiFetch('/workout/plan');
+    cacheWorkoutPlan(data);
+    return data;
+  },
   savePlan: (body) => apiFetch('/workout/plan', { method: 'POST', body: JSON.stringify(body) }),
-  logTimer: (body) => apiFetch('/workout/timer', { method: 'POST', body: JSON.stringify(body) })
+  logTimer: (body) => apiFetch('/workout/timer', { method: 'POST', body: JSON.stringify(body) }),
+  startSession: (body = {}) => apiFetch('/workout/session/start', { method: 'POST', body: JSON.stringify(body) }),
+  getActiveSession: async () => {
+    try {
+      return await apiFetch('/workout/session/active');
+    } catch (error) {
+      if (error.status === 404) return null;
+      throw error;
+    }
+  },
+  completeExercise: (sessionId, body) => apiFetch(`/workout/session/${sessionId}/exercise-complete`, { method: 'POST', body: JSON.stringify(body) }),
+  completeSession: (sessionId, body) => apiFetch(`/workout/session/${sessionId}/complete`, { method: 'POST', body: JSON.stringify(body) }),
+  resetSession: (sessionId) => apiFetch(`/workout/session/${sessionId}/reset`, { method: 'POST', body: JSON.stringify({}) })
 };
 
 const trainerAPI = {

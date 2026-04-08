@@ -22,7 +22,7 @@ async function loadRecommendations() {
 
     renderBMIBanner(recommendations);
     renderDietPlan(recommendations.diet_plan);
-    renderWorkoutPlan(recommendations.workout_plan);
+    renderWorkoutPlan(recommendations.workout_plan, recommendations.workout_plan_details);
     renderWeeklyTips(recommendations.weekly_tips);
     renderGeneratedAt(recommendations.generated_at);
   } catch (error) {
@@ -30,7 +30,7 @@ async function loadRecommendations() {
 
     renderBMIBanner(fallback);
     renderDietPlan(fallback.diet_plan);
-    renderWorkoutPlan(fallback.workout_plan);
+    renderWorkoutPlan(fallback.workout_plan, fallback.workout_plan_details);
     renderWeeklyTips(fallback.weekly_tips);
     renderGeneratedAt(new Date().toISOString());
 
@@ -47,6 +47,7 @@ function normalizeRecommendations(data) {
     daily_calories: raw.daily_calories || raw.calories || 0,
     diet_plan: normalizeDietPlan(raw.diet_plan || raw.meals || {}),
     workout_plan: normalizeWorkoutPlan(raw.workout_plan || raw.weekly_workout || {}),
+    workout_plan_details: normalizeWorkoutPlanDetails(raw.workout_plan_details || {}),
     weekly_tips: Array.isArray(raw.weekly_tips) ? raw.weekly_tips : (raw.weekly_tips ? [raw.weekly_tips] : []),
     generated_at: raw.generated_at || new Date().toISOString()
   };
@@ -65,6 +66,28 @@ function normalizeWorkoutPlan(plan) {
   }
 
   return plan && typeof plan === 'object' ? plan : {};
+}
+
+function normalizeWorkoutPlanDetails(planDetails) {
+  if (!planDetails || typeof planDetails !== 'object') return {};
+
+  return Object.entries(planDetails).reduce((acc, [day, value]) => {
+    if (Array.isArray(value)) {
+      acc[day] = { exercises: value };
+      return acc;
+    }
+
+    if (value && typeof value === 'object') {
+      acc[day] = {
+        focus_area: value.focus_area || value.focus || '',
+        exercises: Array.isArray(value.exercises) ? value.exercises : []
+      };
+      return acc;
+    }
+
+    acc[day] = { exercises: [] };
+    return acc;
+  }, {});
 }
 
 function renderBMIBanner(recommendations) {
@@ -123,7 +146,7 @@ function renderDietPlan(plan) {
   `;
 }
 
-function renderWorkoutPlan(plan) {
+function renderWorkoutPlan(plan, planDetails = {}) {
   const container = document.getElementById('workout-plan');
   if (!container) return;
 
@@ -133,7 +156,12 @@ function renderWorkoutPlan(plan) {
   container.innerHTML = `
     <div class="workout-week-grid">
       ${dayOrder.map((day) => {
-        const exercises = plan[day] || [];
+        const richDay = planDetails[day] || {};
+        const exercises = Array.isArray(richDay.exercises) && richDay.exercises.length
+          ? richDay.exercises
+          : (plan[day] || []);
+        const focusArea = richDay.focus_area || '';
+
         return `
           <div class="workout-day-card card ${day === today ? 'card-today' : ''} hover-lift">
             <div class="card-body recommendation-day-body">
@@ -141,6 +169,7 @@ function renderWorkoutPlan(plan) {
                 <span class="recommendation-day-label">${day}</span>
                 ${day === today ? '<span class="badge badge-accent">Today</span>' : ''}
               </div>
+              ${focusArea ? `<div class="recommendation-exercise-meta">${escapeHtml(focusArea)}</div>` : ''}
               ${exercises.length ? `
                 <div class="exercise-list">
                   ${exercises.map((exercise) => renderRecommendationExercise(exercise)).join('')}
@@ -166,12 +195,14 @@ function renderRecommendationExercise(exercise) {
   const details = [];
   if (exercise.sets) details.push(`${exercise.sets} sets`);
   if (exercise.reps) details.push(`${exercise.reps} reps`);
+  if (exercise.duration_seconds) details.push(`${exercise.duration_seconds} sec`);
   if (exercise.duration_min) details.push(`${exercise.duration_min} min`);
+  if (exercise.muscle_group) details.push(exercise.muscle_group);
 
   return `
     <div class="exercise-item">
       <div class="recommendation-exercise-name">${escapeHtml(exercise.name || 'Exercise')}</div>
-      ${details.length ? `<div class="recommendation-exercise-meta">${details.join(' · ')}</div>` : ''}
+      ${details.length ? `<div class="recommendation-exercise-meta">${escapeHtml(details.join(' • '))}</div>` : ''}
     </div>
   `;
 }
@@ -217,6 +248,7 @@ function buildRecommendationFallback(profile) {
     daily_calories: dailyCalories,
     diet_plan: getFallbackMeals(goal, dailyCalories),
     workout_plan: getFallbackWorkout(goal),
+    workout_plan_details: buildFallbackWorkoutDetails(goal),
     weekly_tips: [
       `Target around ${dailyCalories} kcal with consistent protein intake.`,
       bmi >= 25 ? 'Choose lighter dinners and increase walking after meals.' : 'Spread meals evenly through the day to keep energy stable.',
@@ -272,6 +304,40 @@ function getFallbackWorkout(goal) {
     Sat: [{ name: base[2], duration_min: 25 }],
     Sun: []
   };
+}
+
+function buildFallbackWorkoutDetails(goal) {
+  const focusMap = {
+    weight_loss: {
+      Mon: 'Cardio + lower body',
+      Wed: 'Conditioning + mobility',
+      Fri: 'Strength + endurance',
+      Sat: 'Steady cardio'
+    },
+    muscle_gain: {
+      Mon: 'Push strength',
+      Wed: 'Pull and core',
+      Fri: 'Leg power',
+      Sat: 'Accessory volume'
+    },
+    maintenance: {
+      Mon: 'Full body activation',
+      Wed: 'Cardio conditioning',
+      Fri: 'Strength maintenance',
+      Sat: 'Mobility and recovery'
+    }
+  };
+
+  const basePlan = getFallbackWorkout(goal);
+  const dayFocus = focusMap[goal] || focusMap.maintenance;
+
+  return Object.entries(basePlan).reduce((acc, [day, exercises]) => {
+    acc[day] = {
+      focus_area: dayFocus[day] || '',
+      exercises
+    };
+    return acc;
+  }, {});
 }
 
 function getFallbackCalories(goal, bmi) {

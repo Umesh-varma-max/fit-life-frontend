@@ -901,6 +901,34 @@
   overflow: hidden;
 }
 
+.dashboard-profile-spotlight {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.dashboard-profile-chip {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dashboard-profile-chip strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.dashboard-profile-chip-label {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .mobile-bottom-nav {
   position: fixed;
   left: 0;
@@ -945,6 +973,10 @@
 }
 
 @media (min-width: 769px) {
+  .dashboard-profile-spotlight {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .mobile-bottom-nav {
     display: none;
   }

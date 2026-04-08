@@ -58,6 +58,28 @@
     </header>
 
     <main class="page-content">
+      <div class="card card-glass mb-3 animate-fade-in-up workout-hero-card">
+        <div class="card-body workout-hero-body">
+          <div class="workout-hero-copy">
+            <div class="badge badge-accent" id="hero-goal-badge">Goal</div>
+            <h1 class="workout-hero-title" id="hero-title">Workout at home</h1>
+            <p class="workout-hero-subtitle" id="hero-subtitle">Your adaptive plan updates when your health profile changes, using goal, BMI, and body-fat estimate.</p>
+            <div class="workout-hero-meta">
+              <span id="hero-bmi-meta">BMI --</span>
+              <span id="hero-bfp-meta">BFP --</span>
+              <span id="hero-timeframe-meta">Timeline --</span>
+            </div>
+          </div>
+          <div class="workout-hero-visual">
+            <img id="hero-image" class="workout-hero-image hidden" alt="Workout goal hero">
+            <div class="workout-hero-orb"></div>
+            <div class="workout-hero-silhouette">
+              <span class="workout-hero-kicker">Adaptive training</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card card-glass mb-3 animate-fade-in-up">
         <div class="card-body workout-summary-grid">
           <div>
@@ -65,16 +87,33 @@
             <div id="workout-goal" style="font-size: 1.25rem; font-weight: 700; color: var(--text);">--</div>
           </div>
           <div>
-            <div class="text-muted" style="font-size: 0.8rem;">Weekly Duration</div>
-            <div id="weekly-duration" style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">0 min</div>
+            <div class="text-muted" style="font-size: 0.8rem;">Exercises</div>
+            <div id="weekly-exercise-count" style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">0</div>
           </div>
           <div>
-            <div class="text-muted" style="font-size: 0.8rem;">Weekly Burn</div>
+            <div class="text-muted" style="font-size: 0.8rem;">Minutes</div>
+            <div id="weekly-duration" style="font-size: 1.25rem; font-weight: 700; color: var(--text);">0 min</div>
+          </div>
+          <div>
+            <div class="text-muted" style="font-size: 0.8rem;">Calories</div>
             <div id="weekly-burn" style="font-size: 1.25rem; font-weight: 700; color: var(--text);">0 kcal</div>
           </div>
+        </div>
+      </div>
+
+      <div class="card mb-3 animate-fade-in-up delay-1">
+        <div class="card-body workout-insight-grid">
           <div>
-            <div class="text-muted" style="font-size: 0.8rem;">Active Days</div>
-            <div id="weekly-days" style="font-size: 1.25rem; font-weight: 700; color: var(--text);">0 / 7</div>
+            <div class="text-muted" style="font-size: 0.8rem;">Plan Tier</div>
+            <div id="plan-tier" style="font-size: 1.15rem; font-weight: 700; color: var(--text);">--</div>
+          </div>
+          <div>
+            <div class="text-muted" style="font-size: 0.8rem;">Target Timeline</div>
+            <div id="target-timeline" style="font-size: 1.15rem; font-weight: 700; color: var(--accent);">--</div>
+          </div>
+          <div>
+            <div class="text-muted" style="font-size: 0.8rem;">Body Profile</div>
+            <div id="profile-trigger" style="font-size: 0.95rem; font-weight: 600; color: var(--text);">--</div>
           </div>
         </div>
       </div>
@@ -90,7 +129,14 @@
               <div class="progress-bar" id="session-bar" style="width: 0%;"></div>
             </div>
           </div>
-          <button id="finish-workout-btn" class="btn btn-primary btn-sm" style="display: none;">Finish Workout</button>
+          <div class="workout-session-stats">
+            <div><strong id="session-burn">0 kcal</strong><span>burned</span></div>
+            <div><strong id="session-duration">0 min</strong><span>time</span></div>
+          </div>
+          <div class="workout-session-actions">
+            <button id="reset-session-btn" class="btn btn-ghost btn-sm">Reset Session</button>
+            <button id="finish-workout-btn" class="btn btn-primary btn-sm" style="display: none;">Finish Workout</button>
+          </div>
         </div>
       </div>
 
@@ -138,6 +184,7 @@
   <script src="js/api.js"></script>
   <script src="js/dark-mode.js"></script>
   <script src="js/sidebar.js"></script>
+  <script src="js/workout-catalog.js"></script>
   <script src="js/workout.js"></script>
 </body>
 </html>
