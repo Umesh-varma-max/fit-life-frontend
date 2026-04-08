@@ -46,6 +46,29 @@ function clearStoredSession() {
     CONFIG.AI_CHAT_HISTORY_KEY,
     CONFIG.WORKOUT_PLAN_CACHE_KEY
   ].forEach((key) => localStorage.removeItem(key));
+  sessionStorage.removeItem('fitlife_last_app_page');
+}
+
+function getLastAppPage() {
+  return sessionStorage.getItem('fitlife_last_app_page') || '';
+}
+
+function setLastAppPage(path = '') {
+  const value = String(path || '').trim();
+  if (!value) return;
+  sessionStorage.setItem('fitlife_last_app_page', value);
+}
+
+function getPostLoginDestination(fallback = 'dashboard.html') {
+  const candidate = getLastAppPage();
+  if (candidate && !/index\.html|register\.html/i.test(candidate)) {
+    return candidate;
+  }
+  return fallback;
+}
+
+function hasStoredSession() {
+  return Boolean(getToken());
 }
 
 async function parseApiResponse(response) {
@@ -87,7 +110,7 @@ async function apiFetch(endpoint, options = {}) {
 
   if (response.status === 401) {
     clearStoredSession();
-    window.location.replace('index.html');
+    window.location.replace('index.html?login=1');
     return;
   }
 
@@ -122,7 +145,7 @@ async function apiFetchForm(endpoint, formData, options = {}) {
 
   if (response.status === 401) {
     clearStoredSession();
-    window.location.replace('index.html');
+    window.location.replace('index.html?login=1');
     return;
   }
 

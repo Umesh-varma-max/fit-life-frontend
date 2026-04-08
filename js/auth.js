@@ -10,14 +10,15 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupWelcomeState() {
   const cta = document.getElementById('open-login');
   const logoutBtn = document.getElementById('welcome-logout');
-  const hasSession = Boolean(getToken() && getUser());
+  const hasSession = hasStoredSession();
   if (!cta) return;
 
   if (hasSession) {
+    const destination = getPostLoginDestination();
     cta.textContent = 'Continue to Dashboard';
     logoutBtn?.classList.remove('onboarding-hidden');
     cta.addEventListener('click', () => {
-      window.location.href = 'dashboard.html';
+      window.location.replace(destination);
     });
     logoutBtn?.addEventListener('click', async () => {
       try { await authAPI.logout(); } catch (_) {}
@@ -49,7 +50,7 @@ function setupAuthEntrySheet() {
   };
 
   openBtn?.addEventListener('click', () => {
-    if (getToken() && getUser()) return;
+    if (hasStoredSession()) return;
     setLoginMode(true);
     document.getElementById('login-email')?.focus();
   });
@@ -62,9 +63,17 @@ function setupAuthEntrySheet() {
   });
 
   if (params.get('login') === '1') {
-    if (getToken() && getUser()) return;
+    if (hasStoredSession()) {
+      window.location.replace(getPostLoginDestination());
+      return;
+    }
     shell.classList.add('auth-force-login');
     document.getElementById('login-email')?.focus();
+    return;
+  }
+
+  if (hasStoredSession()) {
+    window.location.replace(getPostLoginDestination());
   }
 }
 
@@ -72,7 +81,7 @@ function setupPasswordToggles() {
   const toggles = [
     { btn: 'toggle-login-password', input: 'login-password' },
     { btn: 'toggle-reg-password', input: 'reg-password' },
-    { btn: 'toggle-reg-confirm', input: 'reg-confirm' },
+    { btn: 'toggle-reg-confirm', input: 'reg-confirm' }
   ];
 
   toggles.forEach(({ btn, input }) => {
@@ -101,7 +110,7 @@ function setupPasswordStrength() {
       document.getElementById('str-seg-1'),
       document.getElementById('str-seg-2'),
       document.getElementById('str-seg-3'),
-      document.getElementById('str-seg-4'),
+      document.getElementById('str-seg-4')
     ];
     const label = document.getElementById('strength-label');
 
@@ -147,10 +156,14 @@ function setupLoginForm() {
       const data = await authAPI.login({ email, password });
       localStorage.setItem(CONFIG.TOKEN_KEY, data.access_token);
       localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(data.user));
-      showToast('Welcome back! 🎉', 'success');
+
+      const destination = getPostLoginDestination();
+      setLastAppPage(destination);
+
+      showToast('Welcome back!', 'success');
       setTimeout(() => {
-        window.location.href = 'dashboard.html';
-      }, 500);
+        window.location.replace(destination);
+      }, 350);
     } catch (err) {
       const errorMsg = document.getElementById('login-error-msg');
       if (errorMsg) {
@@ -201,7 +214,7 @@ function setupRegisterForm() {
       await authAPI.register({ full_name, email, password });
       showToast('Account created! Please sign in.', 'success');
       setTimeout(() => {
-        window.location.href = 'index.html?login=1';
+        window.location.replace('index.html?login=1');
       }, 1000);
     } catch (err) {
       if (err.errors) {
