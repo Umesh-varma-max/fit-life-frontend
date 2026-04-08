@@ -1,9 +1,11 @@
 const SCAN_HISTORY_KEY = 'fitlife_scan_history';
+const SCANNED_MEAL_LOG_KEY = 'fitlife_scanned_meal_logs';
 const MAX_HISTORY_ITEMS = 12;
 
 let currentStream = null;
 let currentFile = null;
 let latestAnalysis = null;
+let currentPreviewDataUrl = '';
 
 const NUTRITION_LIBRARY = [
   { keywords: ['biryani'], food_name: 'Chicken Biryani', serving_estimate: '1 plate', estimated_calories: 620, protein_g: 26, carbs_g: 68, fat_g: 24 },
@@ -79,7 +81,7 @@ async function startCamera() {
 
 function stopCamera() {
   if (!currentStream) return;
-  currentStream.getTracks().forEach(track => track.stop());
+  currentStream.getTracks().forEach((track) => track.stop());
   currentStream = null;
 }
 
@@ -121,12 +123,17 @@ function previewFile(file) {
   hideAnalysisCard();
   stopCamera();
 
-  const previewImage = document.getElementById('preview-image');
-  if (previewImage) {
-    previewImage.src = URL.createObjectURL(file);
-  }
-
-  applyScannerState('preview');
+  fileToDataUrl(file).then((dataUrl) => {
+    currentPreviewDataUrl = dataUrl;
+    const previewImage = document.getElementById('preview-image');
+    if (previewImage) {
+      previewImage.src = dataUrl;
+    }
+    applyScannerState('preview');
+  }).catch((error) => {
+    console.error('Preview image failed', error);
+    showToast('Could not preview that image', 'error');
+  });
 }
 
 async function analyzeCurrentPhoto() {
@@ -148,7 +155,7 @@ async function analyzeCurrentPhoto() {
     const analysis = normalizeApiAnalysis(response);
     latestAnalysis = analysis;
     renderAnalysis(analysis);
-    persistScanHistory(analysis, document.getElementById('preview-image')?.src || '');
+    persistScanHistory(analysis, currentPreviewDataUrl || document.getElementById('preview-image')?.src || '');
     renderScanHistory();
     showToast('Meal analyzed successfully', 'success');
   } catch (error) {
@@ -169,6 +176,7 @@ function normalizeApiAnalysis(response) {
   }
 
   const normalized = {
+    scan_id: analysis.scan_id || `scan-${Date.now()}`,
     food_name: analysis.food_name || analysis.name || 'Detected Meal',
     serving_estimate: analysis.serving_estimate || analysis.serving || '1 serving',
     estimated_calories: Number(analysis.estimated_calories ?? analysis.calories ?? 0),
@@ -178,7 +186,7 @@ function normalizeApiAnalysis(response) {
     confidence: analysis.confidence || 'Estimated',
     notes: Array.isArray(analysis.notes) ? analysis.notes : [],
     feedback: analysis.feedback || 'Balanced meal estimate ready.',
-    diet_warning: normalizeDietWarning(dietWarning),
+    diet_warning: normalizeDietWarning(dietWarning)
   };
 
   return refineAnalysisWithLibrary(normalized);
@@ -203,15 +211,31 @@ async function addCurrentAnalysisToMealLog() {
 
   const mealTime = document.getElementById('meal-time-select')?.value || 'meal';
   const description = `${capitalize(mealTime)}: ${latestAnalysis.food_name} (${latestAnalysis.serving_estimate})`;
+  const localMealEntry = {
+    id: latestAnalysis.scan_id || `meal-${Date.now()}`,
+    log_date: todayDate(),
+    description,
+    calories_in: Math.round(latestAnalysis.estimated_calories || 0),
+    image: currentPreviewDataUrl || document.getElementById('preview-image')?.src || '',
+    food_name: latestAnalysis.food_name,
+    serving_estimate: latestAnalysis.serving_estimate,
+    scanned_at: latestAnalysis.scanned_at || new Date().toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  };
 
   setLoading('log-meal-btn', true);
   try {
     await activityAPI.log({
       log_type: 'meal',
       description,
-      calories_in: Math.round(latestAnalysis.estimated_calories || 0),
+      calories_in: localMealEntry.calories_in,
       log_date: todayDate()
     });
+    persistScannedMealLog(localMealEntry);
     showToast('Added to meal log', 'success');
   } catch (error) {
     console.error('Meal log failed', error);
@@ -253,7 +277,7 @@ function renderAnalysis(analysis) {
   const noteItems = (analysis.notes || []).slice(0, 5);
   if (tags) {
     tags.innerHTML = noteItems.length
-      ? noteItems.map(item => `<span class="badge badge-info">${escapeHtml(item)}</span>`).join('')
+      ? noteItems.map((item) => `<span class="badge badge-info">${escapeHtml(item)}</span>`).join('')
       : '<span class="text-muted">No additional notes.</span>';
   }
 
@@ -321,22 +345,41 @@ function renderScanHistory() {
     return;
   }
 
-  container.innerHTML = history.map(item => `
-    <article class="scan-history-card">
-      <img src="${item.preview}" alt="${escapeHtml(item.food_name)}" class="scan-history-image">
+  container.innerHTML = history.map((item) => `
+    <article class="scan-history-card" data-scan-id="${escapeHtml(item.scan_id || '')}">
+      ${renderScanHistoryPreview(item)}
       <div class="scan-history-copy">
         <div class="scan-history-title">${escapeHtml(item.food_name)}</div>
-        <div class="scan-history-meta">${Math.round(item.estimated_calories || 0)} kcal · ${escapeHtml(item.serving_estimate || '1 serving')}</div>
+        <div class="scan-history-meta">${Math.round(item.estimated_calories || 0)} kcal • ${escapeHtml(item.serving_estimate || '1 serving')}</div>
         <div class="scan-history-meta">${escapeHtml(item.scanned_at)}</div>
       </div>
+      <button class="btn btn-ghost btn-sm scan-history-delete" data-scan-id="${escapeHtml(item.scan_id || '')}" aria-label="Delete scan">Delete</button>
     </article>
   `).join('');
+
+  container.querySelectorAll('.scan-history-delete').forEach((button) => {
+    button.addEventListener('click', () => deleteScanHistoryItem(button.dataset.scanId));
+  });
+}
+
+function renderScanHistoryPreview(item) {
+  if (item.preview) {
+    return `<img src="${item.preview}" alt="${escapeHtml(item.food_name)}" class="scan-history-image">`;
+  }
+
+  return `
+    <div class="scan-history-image scan-history-image-fallback" aria-hidden="true">
+      <span>${escapeHtml((item.food_name || 'Meal').slice(0, 2).toUpperCase())}</span>
+    </div>
+  `;
 }
 
 function persistScanHistory(analysis, preview) {
   const history = getScanHistory();
+  const scanId = analysis.scan_id || `scan-${Date.now()}`;
   history.unshift({
     ...analysis,
+    scan_id: scanId,
     preview,
     scanned_at: new Date().toLocaleString('en-IN', {
       day: '2-digit',
@@ -356,6 +399,28 @@ function getScanHistory() {
   }
 }
 
+function deleteScanHistoryItem(scanId) {
+  if (!scanId) return;
+  localStorage.setItem(SCAN_HISTORY_KEY, JSON.stringify(getScanHistory().filter((item) => item.scan_id !== scanId)));
+  localStorage.setItem(SCANNED_MEAL_LOG_KEY, JSON.stringify(getScannedMealLogs().filter((item) => item.id !== scanId)));
+  renderScanHistory();
+  showToast('Scan removed', 'success');
+}
+
+function persistScannedMealLog(entry) {
+  const logs = getScannedMealLogs();
+  const nextLogs = [entry, ...logs.filter((item) => item.id !== entry.id)].slice(0, 30);
+  localStorage.setItem(SCANNED_MEAL_LOG_KEY, JSON.stringify(nextLogs));
+}
+
+function getScannedMealLogs() {
+  try {
+    return JSON.parse(localStorage.getItem(SCANNED_MEAL_LOG_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
 function toggleAnalyzing(isAnalyzing) {
   document.getElementById('scanner-analyzing')?.classList.toggle('hidden', !isAnalyzing);
 }
@@ -363,6 +428,7 @@ function toggleAnalyzing(isAnalyzing) {
 function clearPreview(resetInput = true) {
   currentFile = null;
   latestAnalysis = null;
+  currentPreviewDataUrl = '';
   hideAnalysisCard();
   toggleAnalyzing(false);
   if (resetInput) {
@@ -378,7 +444,7 @@ function resetScanner() {
 }
 
 function applyScannerState(state) {
-  ['idle', 'camera', 'preview'].forEach(name => {
+  ['idle', 'camera', 'preview'].forEach((name) => {
     document.getElementById(`scanner-${name}`)?.classList.toggle('scanner-panel-active', name === state);
   });
 
@@ -454,6 +520,15 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str || '';
   return div.innerHTML;
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('File read failed'));
+    reader.readAsDataURL(file);
+  });
 }
 
 window.addEventListener('beforeunload', stopCamera);
