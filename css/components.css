@@ -83,7 +83,7 @@
 
 /* Gradient Card */
 .card-gradient {
-  background: linear-gradient(135deg, var(--accent) 0%, #00b4d8 100%);
+  background: var(--brand-gradient);
   color: #fff;
   border: none;
 }
@@ -133,7 +133,7 @@
 
 /* Primary */
 .btn-primary {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  background: var(--brand-gradient);
   color: #fff;
   box-shadow: var(--shadow-accent);
 }
@@ -464,7 +464,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #00b4d8);
+  background: var(--brand-gradient);
   color: #fff;
   display: flex;
   align-items: center;
@@ -726,7 +726,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #00b4d8);
+  background: var(--brand-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -738,7 +738,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7c5cfc, #00b4d8);
+  background: var(--brand-gradient);
   color: #fff;
   display: flex;
   align-items: center;
@@ -757,7 +757,7 @@
 }
 
 .chat-content-user {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  background: var(--brand-gradient);
   border: none;
   border-radius: 16px 16px 4px 16px;
   color: #fff;
