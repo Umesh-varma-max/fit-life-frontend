@@ -83,7 +83,7 @@ function normalizePlanDay(plan) {
 
 function normalizeExercise(exercise) {
   const item = exercise || {};
-  const mediaUrl = item.image_url || item.demo_media_url || item.gif_url || '';
+  const mediaUrl = item.gif_url || item.image_url || item.demo_media_url || item.video_url || '';
 
   return {
     name: item.name || 'Exercise',
@@ -274,7 +274,7 @@ function renderExerciseMetaBlock(exercise) {
 }
 
 function renderExerciseMedia(exercise) {
-  const mediaUrl = exercise.image_url || exercise.demo_media_url || exercise.gif_url || '';
+  const mediaUrl = exercise.gif_url || exercise.image_url || exercise.demo_media_url || '';
   if (mediaUrl) {
     return `<img src="${escapeAttribute(mediaUrl)}" alt="${escapeAttribute(exercise.name)} demo" class="scanner-preview-image">`;
   }
