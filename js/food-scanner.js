@@ -4,6 +4,7 @@ const MAX_HISTORY_ITEMS = 12;
 let currentStream = null;
 let currentFile = null;
 let latestAnalysis = null;
+let latestRawAnalysis = null;
 
 const NUTRITION_LIBRARY = [
   { keywords: ['biryani'], food_name: 'Chicken Biryani', serving_estimate: '1 plate', estimated_calories: 620, protein_g: 26, carbs_g: 68, fat_g: 24 },
@@ -146,6 +147,7 @@ async function analyzeCurrentPhoto() {
   try {
     const response = await foodAPI.analyzePhoto(formData);
     const analysis = normalizeApiAnalysis(response);
+    latestRawAnalysis = response;
     latestAnalysis = analysis;
     renderAnalysis(analysis);
     persistScanHistory(analysis, document.getElementById('preview-image')?.src || '');
@@ -163,6 +165,7 @@ async function analyzeCurrentPhoto() {
 function normalizeApiAnalysis(response) {
   const analysis = response?.analysis || response?.food || response;
   const dietWarning = response?.analysis?.diet_warning || response?.food?.diet_warning || analysis?.diet_warning || null;
+  const scanRecovery = response?.analysis?.scan_recovery || response?.food?.scan_recovery || analysis?.scan_recovery || null;
 
   if (!analysis || typeof analysis !== 'object') {
     throw new Error('Scanner response was empty.');
@@ -178,10 +181,20 @@ function normalizeApiAnalysis(response) {
     confidence: analysis.confidence || 'Estimated',
     notes: Array.isArray(analysis.notes) ? analysis.notes : [],
     feedback: analysis.feedback || 'Balanced meal estimate ready.',
+    source: analysis.source || response?.source || '',
+    provider_error: analysis.provider_error || response?.provider_error || '',
+    provider_notes: normalizeProviderNotes(analysis.provider_notes || response?.provider_notes),
     diet_warning: normalizeDietWarning(dietWarning),
+    scan_recovery: normalizeScanRecovery(scanRecovery)
   };
 
   return refineAnalysisWithLibrary(normalized);
+}
+
+function normalizeProviderNotes(providerNotes) {
+  if (Array.isArray(providerNotes)) return providerNotes.filter(Boolean);
+  if (typeof providerNotes === 'string' && providerNotes.trim()) return [providerNotes.trim()];
+  return [];
 }
 
 function normalizeDietWarning(dietWarning) {
@@ -195,24 +208,51 @@ function normalizeDietWarning(dietWarning) {
   };
 }
 
+function normalizeScanRecovery(scanRecovery) {
+  if (!scanRecovery || typeof scanRecovery !== 'object') return null;
+
+  return {
+    needs_user_confirmation: Boolean(scanRecovery.needs_user_confirmation),
+    provider_source: scanRecovery.provider_source || 'unresolved',
+    suggested_hints: Array.isArray(scanRecovery.suggested_hints) ? scanRecovery.suggested_hints.filter(Boolean) : [],
+    recommended_action: scanRecovery.recommended_action || 'review_before_logging'
+  };
+}
+
 async function addCurrentAnalysisToMealLog() {
   if (!latestAnalysis) {
     showToast('Analyze a meal first', 'warning');
     return;
   }
 
-  const mealTime = document.getElementById('meal-time-select')?.value || 'meal';
-  const description = `${capitalize(mealTime)}: ${latestAnalysis.food_name} (${latestAnalysis.serving_estimate})`;
-
   setLoading('log-meal-btn', true);
   try {
-    await activityAPI.log({
-      log_type: 'meal',
-      description,
-      calories_in: Math.round(latestAnalysis.estimated_calories || 0),
-      log_date: todayDate()
-    });
-    showToast('Added to meal log', 'success');
+    const hint = document.getElementById('manual-food-hint')?.value?.trim() || '';
+    const mealTime = document.getElementById('meal-time-select')?.value || 'meal';
+    const shouldReview = Boolean(latestAnalysis.scan_recovery?.needs_user_confirmation);
+
+    if (shouldReview && !hint) {
+      showToast('Add a food hint first so we can confirm the scan before logging.', 'warning');
+      document.getElementById('manual-food-hint')?.focus();
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('photo', currentFile);
+    formData.append('meal_time', mealTime);
+    formData.append('food_hint', hint);
+    formData.append('log_date', todayDate());
+    formData.append('log_meal', 'true');
+    formData.append('mark_as_eaten', 'true');
+
+    const response = await foodAPI.analyzePhoto(formData);
+    const analysis = normalizeApiAnalysis(response);
+    latestRawAnalysis = response;
+    latestAnalysis = analysis;
+    renderAnalysis(analysis);
+
+    const successMessage = shouldReview ? 'Scan confirmed and meal logged' : 'Added to meal log';
+    showToast(successMessage, 'success');
   } catch (error) {
     console.error('Meal log failed', error);
     showToast(error.message || 'Failed to log meal', 'error');
@@ -235,11 +275,21 @@ function renderAnalysis(analysis) {
   const warningTitle = document.getElementById('analysis-warning-title');
   const warningMessage = document.getElementById('analysis-warning-message');
   const warningIssues = document.getElementById('analysis-warning-issues');
+  const recoveryCard = document.getElementById('analysis-scan-recovery');
+  const recoveryLabel = document.getElementById('analysis-recovery-label');
+  const recoveryBadge = document.getElementById('analysis-recovery-badge');
+  const recoveryTitle = document.getElementById('analysis-recovery-title');
+  const recoveryMessage = document.getElementById('analysis-recovery-message');
+  const recoverySuggestions = document.getElementById('analysis-recovery-suggestions');
+  const logMealBtn = document.getElementById('log-meal-btn');
 
   if (foodName) foodName.textContent = analysis.food_name || 'Detected Meal';
   if (serving) serving.textContent = analysis.serving_estimate || '1 serving';
   if (confidence) confidence.textContent = analysis.confidence || 'Estimated';
   if (feedback) feedback.textContent = analysis.feedback || 'Balanced meal estimate ready.';
+  if (logMealBtn) {
+    logMealBtn.textContent = analysis.scan_recovery?.needs_user_confirmation ? 'Review & Mark as Eaten' : 'Add to Meal Log';
+  }
 
   if (macroGrid) {
     macroGrid.innerHTML = [
@@ -251,11 +301,27 @@ function renderAnalysis(analysis) {
   }
 
   const noteItems = (analysis.notes || []).slice(0, 5);
+  const providerNotes = (analysis.provider_notes || []).slice(0, 3);
   if (tags) {
-    tags.innerHTML = noteItems.length
-      ? noteItems.map(item => `<span class="badge badge-info">${escapeHtml(item)}</span>`).join('')
+    const combinedNotes = [
+      ...(analysis.source ? [`Source: ${analysis.source}`] : []),
+      ...providerNotes,
+      ...(analysis.provider_error ? [`Provider note: ${analysis.provider_error}`] : []),
+      ...noteItems
+    ].slice(0, 6);
+    tags.innerHTML = combinedNotes.length
+      ? combinedNotes.map(item => `<span class="badge badge-info">${escapeHtml(item)}</span>`).join('')
       : '<span class="text-muted">No additional notes.</span>';
   }
+
+  renderScanRecovery(analysis.scan_recovery, {
+    recoveryCard,
+    recoveryLabel,
+    recoveryBadge,
+    recoveryTitle,
+    recoveryMessage,
+    recoverySuggestions
+  });
 
   renderDietWarning(analysis.diet_warning, {
     warningCard,
@@ -271,7 +337,43 @@ function renderAnalysis(analysis) {
 
 function hideAnalysisCard() {
   document.getElementById('analysis-result-card')?.classList.add('hidden');
+  document.getElementById('analysis-scan-recovery')?.classList.add('hidden');
   document.getElementById('analysis-diet-warning')?.classList.add('hidden');
+}
+
+function renderScanRecovery(scanRecovery, elements) {
+  const { recoveryCard, recoveryLabel, recoveryBadge, recoveryTitle, recoveryMessage, recoverySuggestions } = elements;
+  if (!recoveryCard || !recoveryLabel || !recoveryBadge || !recoveryTitle || !recoveryMessage || !recoverySuggestions) return;
+
+  if (!scanRecovery) {
+    recoveryCard.classList.add('hidden');
+    return;
+  }
+
+  const needsReview = Boolean(scanRecovery.needs_user_confirmation);
+  recoveryCard.classList.remove('hidden', 'scanner-warning-card-neutral', 'scanner-warning-card-alert', 'scanner-warning-card-success');
+  recoveryCard.classList.add(needsReview ? 'scanner-warning-card-alert' : 'scanner-warning-card-neutral');
+  recoveryLabel.textContent = needsReview ? 'Review Scan' : 'Scan Source';
+  recoveryBadge.textContent = needsReview ? 'Needs confirmation' : (scanRecovery.provider_source || 'recognized');
+  recoveryBadge.className = `badge ${needsReview ? 'badge-warning' : 'badge-info'}`;
+  recoveryTitle.textContent = needsReview ? 'Add a food hint before logging this meal' : 'Scan completed successfully';
+  recoveryMessage.textContent = buildRecoveryMessage(scanRecovery);
+
+  if (scanRecovery.suggested_hints.length) {
+    recoverySuggestions.innerHTML = scanRecovery.suggested_hints.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+    recoverySuggestions.classList.remove('hidden');
+  } else {
+    recoverySuggestions.innerHTML = '';
+    recoverySuggestions.classList.add('hidden');
+  }
+}
+
+function buildRecoveryMessage(scanRecovery) {
+  if (scanRecovery.needs_user_confirmation) {
+    return 'This scan needs a quick review before logging. Add an Optional Food Hint, especially for packaged foods, labels, or unclear images.';
+  }
+
+  return `Source: ${scanRecovery.provider_source || 'scanner'}${scanRecovery.recommended_action ? ` · Action: ${scanRecovery.recommended_action}` : ''}`;
 }
 
 function renderDietWarning(dietWarning, elements) {
@@ -363,6 +465,7 @@ function toggleAnalyzing(isAnalyzing) {
 function clearPreview(resetInput = true) {
   currentFile = null;
   latestAnalysis = null;
+  latestRawAnalysis = null;
   hideAnalysisCard();
   toggleAnalyzing(false);
   if (resetInput) {

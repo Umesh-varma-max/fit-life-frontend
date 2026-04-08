@@ -1322,6 +1322,11 @@
   border-color: rgba(107, 203, 119, 0.35);
 }
 
+.scanner-warning-card-neutral {
+  background: var(--bg-alt);
+  border-color: var(--border);
+}
+
 .scanner-warning-head {
   display: flex;
   align-items: center;
@@ -1358,6 +1363,12 @@
 .scanner-feedback-copy {
   margin-top: 8px;
   color: var(--text);
+}
+
+.scanner-hint-copy {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
 }
 
 .scanner-history-item {
