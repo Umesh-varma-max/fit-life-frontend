@@ -139,8 +139,7 @@ function mountMobileBottomNav() {
 async function loadDashboard() {
   try {
     const data = await dashboardAPI.get();
-    const profile = getCachedProfile() || {};
-    const d = { ...(data.dashboard || {}), ...buildDashboardProfileFields(data.dashboard || {}, profile) };
+    const d = data.dashboard;
     renderStats(d);
     renderCalorieRing(d);
     renderWeeklyChart(d.weekly_chart);
@@ -154,14 +153,6 @@ async function loadDashboard() {
     showToast('Failed to load dashboard data', 'error');
     console.error(err);
   }
-}
-
-function buildDashboardProfileFields(dashboard, profile) {
-  return {
-    goal_label: dashboard.goal_label || profile.goal_label || formatEnumLabel(profile.fitness_goal || 'maintenance'),
-    activity_label: dashboard.activity_label || profile.activity_label || formatEnumLabel(profile.activity_level || 'moderate'),
-    body_fat_category: dashboard.body_fat_category || profile.body_fat_category || profile.bfp_case || 'Unknown'
-  };
 }
 
 // ─── Render Stat Cards ───────────────────────────
@@ -199,13 +190,6 @@ function renderStats(d) {
   if (waterMl) waterMl.textContent = `${wToday} ml`;
   if (waterGoal) waterGoal.textContent = `${wGoal} ml`;
   if (waterBar) waterBar.style.width = `${percentage(wToday, wGoal)}%`;
-
-  const goalLabel = document.getElementById('dashboard-goal-label');
-  const activityLabel = document.getElementById('dashboard-activity-label');
-  const bfpLabel = document.getElementById('dashboard-bfp-label');
-  if (goalLabel) goalLabel.textContent = d.goal_label || '--';
-  if (activityLabel) activityLabel.textContent = d.activity_label || '--';
-  if (bfpLabel) bfpLabel.textContent = d.body_fat_category || '--';
 }
 
 // ─── Calorie Ring (Doughnut) ─────────────────────

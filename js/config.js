@@ -16,7 +16,6 @@ const CONFIG = {
   THEME_KEY:  'fitness_theme',
   PROFILE_CACHE_KEY: 'fitlife_profile_cache',
   AI_CHAT_HISTORY_KEY: 'fitlife_ai_chat_history',
-  WORKOUT_PLAN_CACHE_KEY: 'fitlife_workout_plan_cache',
 
   // ─── Goals ───
   WATER_GOAL_ML:  3000,

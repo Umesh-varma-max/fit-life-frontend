@@ -8,26 +8,20 @@
 /* ─── CSS Variables (Light Mode) ─── */
 :root {
   /* Core Colors */
-  --bg:             #eef7fb;
-  --bg-alt:         #e1f0f7;
+  --bg:             #f0f4f8;
+  --bg-alt:         #e8eef5;
   --card:           #ffffff;
-  --card-hover:     #f6fbff;
-  --text:           #0d3f73;
-  --text-muted:     #5f7288;
-  --text-light:     #96a5b6;
+  --card-hover:     #f8fbff;
+  --text:           #1a1a2e;
+  --text-muted:     #6b7280;
+  --text-light:     #9ca3af;
 
   /* Accent Colors */
-  --accent:         #1ecab8;
-  --accent-hover:   #13b5b4;
-  --accent-dark:    #0d5ca8;
-  --accent-glow:    rgba(30, 202, 184, 0.26);
-  --accent-subtle:  rgba(30, 202, 184, 0.10);
-  --brand-blue:     #0d5ca8;
-  --brand-cyan:     #1398c9;
-  --brand-teal:     #1ecab8;
-  --brand-green:    #63d468;
-  --brand-gradient: linear-gradient(135deg, #0d5ca8 0%, #1398c9 38%, #1ecab8 70%, #63d468 100%);
-  --brand-gradient-soft: linear-gradient(135deg, rgba(13, 92, 168, 0.12), rgba(30, 202, 184, 0.12), rgba(99, 212, 104, 0.12));
+  --accent:         #00d4aa;
+  --accent-hover:   #00b894;
+  --accent-dark:    #00a884;
+  --accent-glow:    rgba(0, 212, 170, 0.25);
+  --accent-subtle:  rgba(0, 212, 170, 0.08);
 
   /* Semantic Colors */
   --danger:         #ff6b6b;
@@ -40,16 +34,16 @@
   --info-bg:        rgba(78, 168, 222, 0.1);
 
   /* Borders & Shadows */
-  --border:         #d7e6ee;
-  --border-light:   #edf5f9;
-  --shadow-sm:      0 4px 12px rgba(8, 58, 106, 0.05);
-  --shadow:         0 12px 30px rgba(8, 58, 106, 0.08);
-  --shadow-lg:      0 18px 52px rgba(8, 58, 106, 0.14);
-  --shadow-accent:  0 12px 28px rgba(30, 202, 184, 0.22);
+  --border:         #e0e7ef;
+  --border-light:   #f0f3f7;
+  --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow:         0 4px 24px rgba(0, 0, 0, 0.07);
+  --shadow-lg:      0 8px 40px rgba(0, 0, 0, 0.12);
+  --shadow-accent:  0 4px 20px rgba(0, 212, 170, 0.2);
 
   /* Glass Effect */
-  --glass-bg:       rgba(255, 255, 255, 0.76);
-  --glass-border:   rgba(255, 255, 255, 0.42);
+  --glass-bg:       rgba(255, 255, 255, 0.7);
+  --glass-border:   rgba(255, 255, 255, 0.3);
   --glass-blur:     12px;
 
   /* Typography */
@@ -76,20 +70,20 @@
 
 /* ─── Dark Mode Overrides ─── */
 [data-theme="dark"] {
-  --bg:             #04131f;
-  --bg-alt:         #0a2132;
-  --card:           #0c1f31;
-  --card-hover:     #123048;
-  --text:           #e7f8ff;
-  --text-muted:     #8facc3;
-  --text-light:     #5f7d94;
-  --border:         #15354d;
-  --border-light:   #0f293d;
+  --bg:             #0d0d1a;
+  --bg-alt:         #12122a;
+  --card:           #1a1a2e;
+  --card-hover:     #22223a;
+  --text:           #e8eaf6;
+  --text-muted:     #8888aa;
+  --text-light:     #5a5a7a;
+  --border:         #2a2a45;
+  --border-light:   #1e1e38;
   --shadow-sm:      0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow:         0 8px 28px rgba(0, 0, 0, 0.38);
-  --shadow-lg:      0 18px 52px rgba(0, 0, 0, 0.48);
-  --glass-bg:       rgba(10, 33, 50, 0.74);
-  --glass-border:   rgba(21, 53, 77, 0.68);
+  --shadow:         0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-lg:      0 8px 40px rgba(0, 0, 0, 0.5);
+  --glass-bg:       rgba(26, 26, 46, 0.7);
+  --glass-border:   rgba(42, 42, 69, 0.5);
 }
 
 /* ─── Reset ─── */
@@ -110,23 +104,13 @@ html {
 
 body {
   font-family: var(--font-main);
-  background:
-    radial-gradient(circle at top left, rgba(19, 152, 201, 0.14), transparent 26rem),
-    radial-gradient(circle at top right, rgba(99, 212, 104, 0.1), transparent 22rem),
-    linear-gradient(180deg, var(--bg) 0%, #f8fcff 100%);
+  background: var(--bg);
   color: var(--text);
   line-height: 1.6;
   font-size: 16px;
   min-height: 100vh;
   overflow-x: hidden;
   transition: background 0.3s ease, color 0.3s ease;
-}
-
-[data-theme="dark"] body {
-  background:
-    radial-gradient(circle at top left, rgba(19, 152, 201, 0.16), transparent 24rem),
-    radial-gradient(circle at top right, rgba(99, 212, 104, 0.12), transparent 20rem),
-    linear-gradient(180deg, #04131f 0%, #03101a 100%);
 }
 
 body,

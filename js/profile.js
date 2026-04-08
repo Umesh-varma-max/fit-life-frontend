@@ -261,17 +261,14 @@ function syncHeightDisplay() {
 async function loadExistingProfile() {
   try {
     const data = await profileAPI.get();
-    const profile = enrichProfileMetrics({
-      ...data.profile,
-      bmi: data.profile.bmi ?? data.bmi,
-      body_fat_percentage: data.profile.body_fat_percentage ?? data.body_fat_percentage,
-      body_fat_category: data.profile.body_fat_category ?? data.body_fat_category,
-      bfp_case: data.profile.body_fat_category ?? data.body_fat_category,
-      daily_calories: data.profile.daily_calories ?? data.daily_calories
-    });
+    const profile = data.profile;
     hasSavedProfile = true;
 
-    cacheProfile(profile);
+    cacheProfile({
+      ...profile,
+      bmi: profile.bmi ?? data.bmi,
+      daily_calories: profile.daily_calories ?? data.daily_calories
+    });
 
     if (profile.age) document.getElementById('age').value = profile.age;
     if (profile.height_cm) document.getElementById('height').value = Math.round(profile.height_cm);
@@ -301,7 +298,11 @@ async function loadExistingProfile() {
     if (goalRadio) goalRadio.checked = true;
 
     syncAllDisplays();
-    renderProfileSummary(profile);
+    renderProfileSummary({
+      ...profile,
+      bmi: profile.bmi ?? data.bmi,
+      daily_calories: profile.daily_calories ?? data.daily_calories
+    });
     showProfileSummary();
   } catch (error) {
     if (error.status !== 404) {
@@ -326,22 +327,17 @@ async function saveProfile() {
   setLoading('save-btn', true);
   try {
     const data = await profileAPI.save(body);
-    const enrichedProfile = enrichProfileMetrics({
+    cacheProfile({
       ...body,
       bmi: data.bmi,
-      body_fat_percentage: data.body_fat_percentage,
-      body_fat_category: data.body_fat_category,
-      bfp_case: data.body_fat_category,
       daily_calories: data.daily_calories
     });
-    cacheProfile(enrichedProfile);
     hasSavedProfile = true;
-    renderProfileSummary(enrichedProfile);
-    try {
-      await workoutAPI.getPlan();
-    } catch (workoutError) {
-      console.error('Failed to refresh workout plan after profile save:', workoutError);
-    }
+    renderProfileSummary({
+      ...body,
+      bmi: data.bmi,
+      daily_calories: data.daily_calories
+    });
     showToast(`Profile saved! BMI: ${data.bmi} · Daily Calories: ${data.daily_calories} kcal`, 'success', 4000);
     setTimeout(() => {
       showProfileSummary();
@@ -370,8 +366,8 @@ function setText(id, value) {
 function renderProfileSummary(profile) {
   setText('summary-bmi', profile.bmi ? Number(profile.bmi).toFixed(1) : '--');
   setText('summary-bmi-label', profile.bmi ? getBMICategory(profile.bmi).label : 'BMI');
-  setText('summary-goal', profile.goal_label || formatEnumLabel(profile.fitness_goal || 'maintenance'));
-  setText('summary-bfp', profile.body_fat_percentage ? `${Number(profile.body_fat_percentage).toFixed(1)}%` : '--');
+  setText('summary-goal', formatEnumLabel(profile.fitness_goal || 'maintenance'));
+  setText('summary-activity', formatEnumLabel(profile.activity_level || 'moderate'));
   setText('summary-gender', formatEnumLabel(profile.gender || '--'));
   setText('summary-age', profile.age ? `${profile.age} years` : '--');
   setText('summary-weight', profile.weight_kg ? `${Math.round(profile.weight_kg)} kg` : '--');
@@ -387,59 +383,4 @@ function renderProfileSummary(profile) {
     };
     goalCopy.textContent = copyMap[profile.fitness_goal] || copyMap.maintenance;
   }
-
-  const bfpCopy = document.getElementById('summary-bfp-copy');
-  if (bfpCopy) {
-    const bodyFatCategory = profile.body_fat_category || profile.bfp_case;
-    bfpCopy.textContent = bodyFatCategory
-      ? `Current body-fat category: ${bodyFatCategory}. This helps adapt your workout volume and pacing.`
-      : 'Calculated from your current profile to fine-tune workout intensity.';
-  }
-}
-
-function enrichProfileMetrics(profile) {
-  const enriched = { ...profile };
-  const bmi = Number(enriched.bmi || calculateBMI(enriched.height_cm, enriched.weight_kg) || 0);
-  if (bmi) enriched.bmi = Number(bmi).toFixed(1);
-
-  const bfp = calculateBodyFatPercentage({
-    bmi,
-    age: Number(enriched.age || 0),
-    gender: enriched.gender
-  });
-
-  if (bfp != null) {
-    enriched.body_fat_percentage = Number(bfp).toFixed(1);
-    enriched.body_fat_category = enriched.body_fat_category || getBfpCase(Number(bfp), enriched.gender);
-    enriched.bfp_case = enriched.body_fat_category;
-  }
-
-  return enriched;
-}
-
-function calculateBodyFatPercentage({ bmi, age, gender }) {
-  if (!bmi || !age || !gender) return null;
-  const genderValue = gender === 'male' ? 1 : 0;
-  return (1.2 * bmi) + (0.23 * age) - (10.8 * genderValue) - 5.4;
-}
-
-function getBfpCase(bfp, gender) {
-  if (!bfp || !gender) return null;
-  const bands = gender === 'male'
-    ? [
-        ['Essential', 5],
-        ['Athlete', 13],
-        ['Fitness', 17],
-        ['Average', 24],
-        ['Obese', Infinity]
-      ]
-    : [
-        ['Essential', 13],
-        ['Athlete', 20],
-        ['Fitness', 24],
-        ['Average', 31],
-        ['Obese', Infinity]
-      ];
-
-  return bands.find(([, max]) => bfp <= max)?.[0] || 'Average';
 }
