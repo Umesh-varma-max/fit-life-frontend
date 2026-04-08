@@ -1,8 +1,6 @@
-// --------------------------------------------------
-// tracker.js - Activity Logging (Meals/Workout/Water/Sleep)
-// --------------------------------------------------
-
-const SCANNED_MEAL_LOG_KEY = 'fitlife_scanned_meal_logs';
+// ──────────────────────────────────────────────────
+// tracker.js — Activity Logging (Meals/Workout/Water/Sleep)
+// ──────────────────────────────────────────────────
 
 let currentDate = todayDate();
 let waterTotal = 0;
@@ -17,9 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDayLogs(currentDate);
 });
 
-// --------------------------------------------------
-// Date Picker
-// --------------------------------------------------
+// ─── Date Picker ─────────────────────────────────
 function initDatePicker() {
   const dateInput = document.getElementById('tracker-date');
   const prevBtn = document.getElementById('prev-day');
@@ -56,28 +52,27 @@ function initDatePicker() {
   });
 }
 
-// --------------------------------------------------
-// Tab Switching
-// --------------------------------------------------
+// ─── Tab Switching ───────────────────────────────
 function initTabs() {
   const tabs = document.querySelectorAll('.tab-btn');
   const contents = document.querySelectorAll('.tab-content');
 
+  // Check URL param for active tab
   const params = new URLSearchParams(window.location.search);
   const activeTab = params.get('tab');
   if (activeTab) {
-    tabs.forEach((t) => t.classList.remove('active'));
-    contents.forEach((c) => c.classList.remove('active'));
+    tabs.forEach(t => t.classList.remove('active'));
+    contents.forEach(c => c.classList.remove('active'));
     const tabBtn = document.querySelector(`.tab-btn[data-tab="${activeTab}"]`);
     const tabContent = document.getElementById(`content-${activeTab}`);
     if (tabBtn) tabBtn.classList.add('active');
     if (tabContent) tabContent.classList.add('active');
   }
 
-  tabs.forEach((tab) => {
+  tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      tabs.forEach((t) => t.classList.remove('active'));
-      contents.forEach((c) => c.classList.remove('active'));
+      tabs.forEach(t => t.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
       tab.classList.add('active');
       const target = document.getElementById(`content-${tab.dataset.tab}`);
       if (target) target.classList.add('active');
@@ -85,9 +80,7 @@ function initTabs() {
   });
 }
 
-// --------------------------------------------------
-// Load Day Logs
-// --------------------------------------------------
+// ─── Load Day Logs ───────────────────────────────
 async function loadDayLogs(date) {
   try {
     const data = await activityAPI.getDay(date);
@@ -95,6 +88,7 @@ async function loadDayLogs(date) {
     renderDayLogs(data.logs || []);
   } catch (err) {
     if (err.status === 404) {
+      // No logs for this day
       renderDaySummary({ calories_in: 0, calories_out: 0, water_ml: 0, sleep_hours: 0 });
       renderDayLogs([]);
       return;
@@ -103,31 +97,29 @@ async function loadDayLogs(date) {
   }
 }
 
-// --------------------------------------------------
-// Render Day Summary
-// --------------------------------------------------
-function renderDaySummary(summary) {
+// ─── Render Day Summary ──────────────────────────
+function renderDaySummary(s) {
   const sumCalIn = document.getElementById('sum-cal-in');
   const sumCalOut = document.getElementById('sum-cal-out');
   const sumWater = document.getElementById('sum-water');
   const sumSleep = document.getElementById('sum-sleep');
 
-  if (sumCalIn) sumCalIn.textContent = formatNumber(summary.calories_in || 0);
-  if (sumCalOut) sumCalOut.textContent = formatNumber(summary.calories_out || 0);
-  if (sumWater) sumWater.textContent = formatNumber(summary.water_ml || 0);
-  if (sumSleep) sumSleep.textContent = (summary.sleep_hours || 0).toFixed(1);
+  if (sumCalIn) sumCalIn.textContent = formatNumber(s.calories_in || 0);
+  if (sumCalOut) sumCalOut.textContent = formatNumber(s.calories_out || 0);
+  if (sumWater) sumWater.textContent = formatNumber(s.water_ml || 0);
+  if (sumSleep) sumSleep.textContent = (s.sleep_hours || 0).toFixed(1);
 
-  waterTotal = summary.water_ml || 0;
+  // Update water tab display
+  waterTotal = s.water_ml || 0;
   updateWaterDisplay();
 }
 
-// --------------------------------------------------
-// Render Day Logs
-// --------------------------------------------------
+// ─── Render Day Logs ─────────────────────────────
 function renderDayLogs(logs) {
-  const mealLogs = mergeMealLogsWithScanned(logs.filter((log) => log.log_type === 'meal'));
-  const workoutLogs = logs.filter((log) => log.log_type === 'workout');
+  const mealLogs = logs.filter(l => l.log_type === 'meal');
+  const workoutLogs = logs.filter(l => l.log_type === 'workout');
 
+  // Meals
   const mealsList = document.getElementById('meals-list');
   const mealsCount = document.getElementById('meals-count');
   if (mealsCount) mealsCount.textContent = mealLogs.length;
@@ -135,22 +127,23 @@ function renderDayLogs(logs) {
   if (mealLogs.length === 0) {
     mealsList.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">Meal</div>
+        <div class="empty-state-icon">🍽️</div>
         <div class="empty-state-title">No meals logged</div>
         <p class="empty-state-text">Start logging your meals to track calorie intake</p>
       </div>`;
   } else {
-    mealsList.innerHTML = mealLogs.map((log) => `
+    mealsList.innerHTML = mealLogs.map(log => `
       <div class="log-item animate-fade-in-up">
-        ${renderMealLogVisual(log)}
+        <div class="log-item-icon">🍽️</div>
         <div class="log-item-info">
           <div class="log-item-title">${escapeHtml(log.description || 'Meal')}</div>
-          <div class="log-item-meta">${buildMealMeta(log)}</div>
+          <div class="log-item-meta">${log.calories_in || 0} kcal</div>
         </div>
       </div>
     `).join('');
   }
 
+  // Workouts
   const workoutList = document.getElementById('workout-list');
   const workoutsCount = document.getElementById('workouts-count');
   if (workoutsCount) workoutsCount.textContent = workoutLogs.length;
@@ -158,12 +151,12 @@ function renderDayLogs(logs) {
   if (workoutLogs.length === 0) {
     workoutList.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">Run</div>
+        <div class="empty-state-icon">🏃</div>
         <div class="empty-state-title">No workouts logged</div>
         <p class="empty-state-text">Log your exercises to track calories burned</p>
       </div>`;
   } else {
-    workoutList.innerHTML = workoutLogs.map((log) => `
+    workoutList.innerHTML = workoutLogs.map(log => `
       <div class="log-item animate-fade-in-up">
         <div class="log-item-icon">🏋️</div>
         <div class="log-item-info">
@@ -175,80 +168,12 @@ function renderDayLogs(logs) {
   }
 }
 
-function buildMealMeta(log) {
-  const parts = [`${log.calories_in || 0} kcal`];
-  if (log.serving_estimate) {
-    parts.push(escapeHtml(log.serving_estimate));
-  }
-  if (log.scanned_at) {
-    parts.push(escapeHtml(log.scanned_at));
-  }
-  return parts.join(' · ');
-}
-
-function mergeMealLogsWithScanned(mealLogs) {
-  const currentDayScans = getScannedMealLogs().filter((entry) => entry.log_date === currentDate);
-  if (!currentDayScans.length) return mealLogs;
-
-  const merged = [...mealLogs];
-  const existingKeys = new Set(
-    merged.map((log) => mealLogKey(log))
-  );
-
-  currentDayScans.forEach((entry) => {
-    const key = mealLogKey(entry);
-    if (existingKeys.has(key)) {
-      const match = merged.find((log) => mealLogKey(log) === key);
-      if (match && !match.image && entry.image) {
-        match.image = entry.image;
-      }
-      if (match && !match.serving_estimate && entry.serving_estimate) {
-        match.serving_estimate = entry.serving_estimate;
-      }
-      if (match && !match.scanned_at && entry.scanned_at) {
-        match.scanned_at = entry.scanned_at;
-      }
-      return;
-    }
-
-    merged.unshift({
-      ...entry,
-      log_type: 'meal'
-    });
-    existingKeys.add(key);
-  });
-
-  return merged;
-}
-
-function mealLogKey(log) {
-  return `${log.description || ''}|${Number(log.calories_in || 0)}|${log.log_date || currentDate}`;
-}
-
-function getScannedMealLogs() {
-  try {
-    return JSON.parse(localStorage.getItem(SCANNED_MEAL_LOG_KEY) || '[]');
-  } catch {
-    return [];
-  }
-}
-
-function renderMealLogVisual(log) {
-  if (log.image) {
-    return `<img src="${escapeHtml(log.image)}" alt="${escapeHtml(log.food_name || log.description || 'Meal')}" class="log-item-thumb">`;
-  }
-
-  return '<div class="log-item-icon">🍽️</div>';
-}
-
-// --------------------------------------------------
-// Meal Form
-// --------------------------------------------------
+// ─── Meal Form ───────────────────────────────────
 function initMealForm() {
   const btn = document.getElementById('log-meal-btn');
   btn.addEventListener('click', async () => {
     const desc = document.getElementById('meal-desc').value.trim();
-    const cal = parseInt(document.getElementById('meal-calories').value, 10) || 0;
+    const cal = parseInt(document.getElementById('meal-calories').value) || 0;
 
     if (!desc) {
       showToast('Please enter a food description', 'warning');
@@ -265,9 +190,9 @@ function initMealForm() {
         log_type: 'meal',
         description: desc,
         calories_in: cal,
-        log_date: currentDate
+        log_date: currentDate,
       });
-      showToast('Meal logged successfully!', 'success');
+      showToast('Meal logged successfully! 🍽️', 'success');
       document.getElementById('meal-desc').value = '';
       document.getElementById('meal-calories').value = '';
       loadDayLogs(currentDate);
@@ -279,15 +204,13 @@ function initMealForm() {
   });
 }
 
-// --------------------------------------------------
-// Workout Form
-// --------------------------------------------------
+// ─── Workout Form ────────────────────────────────
 function initWorkoutForm() {
   const btn = document.getElementById('log-workout-btn');
   btn.addEventListener('click', async () => {
     const desc = document.getElementById('wk-desc').value;
-    const dur = parseInt(document.getElementById('wk-duration').value, 10) || 0;
-    const cal = parseInt(document.getElementById('wk-calories').value, 10) || 0;
+    const dur = parseInt(document.getElementById('wk-duration').value) || 0;
+    const cal = parseInt(document.getElementById('wk-calories').value) || 0;
 
     if (!desc) {
       showToast('Please select a workout type', 'warning');
@@ -305,9 +228,9 @@ function initWorkoutForm() {
         description: desc,
         duration_min: dur,
         calories_out: cal,
-        log_date: currentDate
+        log_date: currentDate,
       });
-      showToast('Workout logged!', 'success');
+      showToast('Workout logged! 🏋️', 'success');
       document.getElementById('wk-desc').value = '';
       document.getElementById('wk-duration').value = '';
       document.getElementById('wk-calories').value = '';
@@ -320,21 +243,21 @@ function initWorkoutForm() {
   });
 }
 
-// --------------------------------------------------
-// Water Controls
-// --------------------------------------------------
+// ─── Water Controls ──────────────────────────────
 function initWaterControls() {
-  document.querySelectorAll('.water-add').forEach((btn) => {
+  // Quick-add buttons
+  document.querySelectorAll('.water-add').forEach(btn => {
     btn.addEventListener('click', () => {
-      const amount = parseInt(btn.dataset.amount, 10);
+      const amount = parseInt(btn.dataset.amount);
       logWater(amount);
     });
   });
 
+  // Custom amount
   const customBtn = document.getElementById('water-custom-btn');
   customBtn.addEventListener('click', () => {
     const input = document.getElementById('water-custom');
-    const amount = parseInt(input.value, 10);
+    const amount = parseInt(input.value);
     if (!amount || amount <= 0) {
       showToast('Enter a valid amount', 'warning');
       return;
@@ -349,11 +272,12 @@ async function logWater(amount) {
     await activityAPI.log({
       log_type: 'water',
       water_ml: amount,
-      log_date: currentDate
+      log_date: currentDate,
     });
     waterTotal += amount;
     updateWaterDisplay();
-    showToast(`+${amount} ml water logged!`, 'success');
+    showToast(`+${amount} ml water logged! 💧`, 'success');
+    // Update summary
     const sumWater = document.getElementById('sum-water');
     if (sumWater) sumWater.textContent = formatNumber(waterTotal);
   } catch (err) {
@@ -372,18 +296,16 @@ function updateWaterDisplay() {
   if (progress) progress.style.width = `${percentage(waterTotal, goal)}%`;
 }
 
-// --------------------------------------------------
-// Sleep Controls
-// --------------------------------------------------
+// ─── Sleep Controls ──────────────────────────────
 function initSleepControls() {
   const slider = document.getElementById('sleep-range');
   const display = document.getElementById('sleep-range-display');
   const sleepDisplay = document.getElementById('sleep-display');
 
   slider.addEventListener('input', () => {
-    const value = parseFloat(slider.value);
-    display.textContent = value.toFixed(1);
-    sleepDisplay.textContent = `${value.toFixed(1)} hrs`;
+    const val = parseFloat(slider.value);
+    display.textContent = val.toFixed(1);
+    sleepDisplay.textContent = `${val.toFixed(1)} hrs`;
   });
 
   const btn = document.getElementById('log-sleep-btn');
@@ -399,9 +321,10 @@ function initSleepControls() {
       await activityAPI.log({
         log_type: 'sleep',
         sleep_hours: hours,
-        log_date: currentDate
+        log_date: currentDate,
       });
-      showToast(`${hours} hrs sleep logged!`, 'success');
+      showToast(`${hours} hrs sleep logged! 😴`, 'success');
+      // Update summary
       const sumSleep = document.getElementById('sum-sleep');
       if (sumSleep) sumSleep.textContent = hours.toFixed(1);
     } catch (err) {
@@ -412,11 +335,9 @@ function initSleepControls() {
   });
 }
 
-// --------------------------------------------------
-// HTML Escape Util
-// --------------------------------------------------
+// ─── HTML Escape Util ────────────────────────────
 function escapeHtml(str) {
   const div = document.createElement('div');
-  div.textContent = str || '';
+  div.textContent = str;
   return div.innerHTML;
 }
