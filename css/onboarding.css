@@ -24,10 +24,10 @@
 .welcome-shell::after {
   content: '';
   position: absolute;
-  right: -6vw;
-  top: 10vh;
-  width: clamp(220px, 48vw, 420px);
-  height: 76vh;
+  right: -10vw;
+  top: 12vh;
+  width: clamp(180px, 44vw, 420px);
+  height: 68vh;
   border-radius: 12rem 12rem 3rem 3rem;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0)),
@@ -47,11 +47,12 @@
   display: flex;
   align-items: flex-end;
   justify-content: flex-start;
-  padding: 2rem 1.5rem max(2rem, env(safe-area-inset-bottom));
+  padding: 1.5rem 1.5rem max(2rem, env(safe-area-inset-bottom));
 }
 
 .welcome-copy {
-  width: min(100%, 22rem);
+  width: min(100%, 21rem);
+  padding-bottom: clamp(2rem, 8vh, 4.5rem);
 }
 
 .welcome-kicker {
@@ -73,10 +74,29 @@
 
 .welcome-subtitle {
   margin: 1rem 0 1.75rem;
-  max-width: 19rem;
+  max-width: 17rem;
   color: rgba(255,255,255,0.78);
   font-size: 1rem;
   line-height: 1.6;
+}
+
+.welcome-shell .auth-theme-toggle {
+  top: max(0.85rem, env(safe-area-inset-top) + 0.35rem);
+  right: 1rem;
+  z-index: 3;
+}
+
+.welcome-shell .auth-theme-toggle .btn-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(24, 18, 56, 0.9);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+}
+
+.welcome-shell .auth-theme-toggle .btn-icon:hover {
+  transform: translateY(-1px);
 }
 
 .welcome-cta {
@@ -751,6 +771,23 @@
 
   .welcome-copy {
     width: min(100%, 30rem);
+    padding-bottom: 2rem;
+  }
+
+  .welcome-subtitle {
+    max-width: 22rem;
+  }
+
+  .welcome-shell::after {
+    right: -6vw;
+    top: 10vh;
+    width: clamp(220px, 48vw, 420px);
+    height: 76vh;
+  }
+
+  .welcome-shell .auth-theme-toggle {
+    top: 1.5rem;
+    right: 1.5rem;
   }
 
   .auth-entry-sheet {

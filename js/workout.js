@@ -53,7 +53,7 @@ function normalizeWorkoutData(data) {
   return {
     goal_label: raw.goal_label || profile.goal_label || formatEnumLabel(profile.fitness_goal || 'maintenance'),
     goal_badge: raw.goal_badge || (profile.goal_label || formatEnumLabel(profile.fitness_goal || 'maintenance')).toUpperCase(),
-    hero_image_url: raw.hero_image_url || '',
+    hero_image_url: resolveExerciseMediaUrl(raw.hero_image_url || ''),
     goal_eta_weeks: raw.goal_eta_weeks || 0,
     bmi_category: raw.bmi_category || getBMICategory(profile.bmi || 0).label || 'Unknown',
     body_fat_category: raw.body_fat_category || profile.body_fat_category || profile.bfp_case || 'Unknown',
@@ -83,7 +83,7 @@ function normalizePlanDay(plan) {
 
 function normalizeExercise(exercise) {
   const item = exercise || {};
-  const mediaUrl = item.gif_url || item.image_url || item.demo_media_url || item.video_url || '';
+  const mediaUrl = resolveExerciseMediaUrl(item.gif_url || item.image_url || item.video_url || item.demo_media_url || '');
 
   return {
     name: item.name || 'Exercise',
@@ -100,10 +100,12 @@ function normalizeExercise(exercise) {
     target_muscles: Array.isArray(item.target_muscles) ? item.target_muscles : [],
     secondary_muscles: Array.isArray(item.secondary_muscles) ? item.secondary_muscles : [],
     equipments: Array.isArray(item.equipments) ? item.equipments : [],
-    gif_url: item.gif_url || '',
-    image_url: item.image_url || '',
-    video_url: item.video_url || '',
-    demo_media_url: item.demo_media_url || '',
+    gif_url: resolveExerciseMediaUrl(item.gif_url || ''),
+    image_url: resolveExerciseMediaUrl(item.image_url || ''),
+    video_url: resolveExerciseMediaUrl(item.video_url || ''),
+    demo_media_url: resolveExerciseMediaUrl(item.demo_media_url || ''),
+    has_demo_media: Boolean(item.has_demo_media && mediaUrl),
+    media_fallback_text: item.media_fallback_text || '',
     media_url: mediaUrl,
     estimated_calories_burn: Number(item.estimated_calories_burn || 0)
   };
@@ -165,8 +167,8 @@ function renderHero(data) {
 function buildHeroSubtitle(data) {
   const parts = [];
   if (data.goal_label) parts.push(`${data.goal_label} plan`);
-  if (data.bmi_category) parts.push(`${data.bmi_category.toLowerCase()} BMI`);
-  if (data.body_fat_category) parts.push(`${data.body_fat_category.toLowerCase()} body-fat status`);
+  if (data.bmi_category) parts.push(`${String(data.bmi_category).toLowerCase()} BMI`);
+  if (data.body_fat_category) parts.push(`${String(data.body_fat_category).toLowerCase()} body-fat status`);
   if (data.goal_eta_weeks) parts.push(`${data.goal_eta_weeks} week target`);
   return `Adaptive workouts now follow your ${parts.join(', ')}.`;
 }
@@ -195,17 +197,20 @@ function renderTodayPlan(todayPlan) {
         </div>
       </div>
     `;
-    document.getElementById('session-card').style.display = 'none';
+    const sessionCard = document.getElementById('session-card');
+    if (sessionCard) sessionCard.style.display = 'none';
     return;
   }
 
-  document.getElementById('session-card').style.display = '';
+  const sessionCard = document.getElementById('session-card');
+  if (sessionCard) sessionCard.style.display = '';
+
   container.innerHTML = `
     <div class="card mb-3 animate-fade-in-up">
       <div class="card-body workout-day-summary">
         <div class="workout-day-summary-copy">
           <div class="workout-day-summary-title">${escapeHtml(todayPlan.plan_name || 'Workout Activity')}</div>
-          <div class="text-muted workout-day-summary-meta">${exercises.length} exercises · ${todayPlan.total_duration_min || 0} min · ${todayPlan.total_estimated_calories_burn || 0} kcal burn</div>
+          <div class="text-muted workout-day-summary-meta">${exercises.length} exercises • ${todayPlan.total_duration_min || 0} min • ${todayPlan.total_estimated_calories_burn || 0} kcal burn</div>
         </div>
         <span class="badge badge-accent">Today</span>
       </div>
@@ -240,7 +245,7 @@ function renderExerciseCard(exercise, index) {
         <div class="exercise-copy">
           <div class="exercise-name">${escapeHtml(exercise.name)}</div>
           <div class="text-muted exercise-meta">${escapeHtml(subtitle)}</div>
-          ${details.length ? `<div class="text-muted exercise-meta">${escapeHtml(details.join(' · '))}</div>` : ''}
+          ${details.length ? `<div class="text-muted exercise-meta">${escapeHtml(details.join(' • '))}</div>` : ''}
           ${renderExerciseMetaBlock(exercise)}
         </div>
         <div class="exercise-actions">
@@ -274,14 +279,36 @@ function renderExerciseMetaBlock(exercise) {
 }
 
 function renderExerciseMedia(exercise) {
-  const mediaUrl = exercise.gif_url || exercise.image_url || exercise.demo_media_url || '';
-  if (mediaUrl) {
+  const mediaUrl = exercise.gif_url || exercise.image_url || exercise.video_url || exercise.demo_media_url || '';
+  const hasMedia = Boolean(exercise.has_demo_media && mediaUrl);
+
+  if (hasMedia && (exercise.gif_url || exercise.image_url || exercise.demo_media_url)) {
     return `<img src="${escapeAttribute(mediaUrl)}" alt="${escapeAttribute(exercise.name)} demo" class="scanner-preview-image">`;
   }
-  if (exercise.video_url) {
+
+  if (hasMedia && exercise.video_url) {
     return `<video class="scanner-preview-image" src="${escapeAttribute(exercise.video_url)}" muted autoplay loop playsinline></video>`;
   }
-  return getWorkoutPoseMarkup(exercise.name);
+
+  return renderMediaFallback(exercise);
+}
+
+function renderMediaFallback(exercise) {
+  const fallbackCopy = exercise.media_fallback_text || exercise.description || 'Demo not available for this movement yet.';
+  const tags = [
+    exercise.muscle_group,
+    ...(exercise.target_muscles || []).slice(0, 2),
+    ...(exercise.equipments || []).slice(0, 2)
+  ].filter(Boolean);
+
+  return `
+    <div class="exercise-media-fallback">
+      <div class="exercise-media-fallback-icon">${getWorkoutPoseMarkup(exercise.name)}</div>
+      <div class="exercise-media-fallback-title">Demo not available</div>
+      <div class="exercise-media-fallback-copy">${escapeHtml(fallbackCopy)}</div>
+      ${tags.length ? `<div class="exercise-inline-meta">${tags.map((chip) => `<span class="badge badge-info">${escapeHtml(formatEnumLabel(chip))}</span>`).join('')}</div>` : ''}
+    </div>
+  `;
 }
 
 function renderWeeklyPlan(plans) {
@@ -304,8 +331,8 @@ function renderWeeklyPlan(plans) {
       <div class="card-body weekly-plan-card-body">
         <div class="weekly-plan-head">
           <div class="weekly-plan-head-copy">
-            <div class="weekly-plan-title">${escapeHtml(plan.day)} · ${escapeHtml(plan.plan_name || `${plan.day} Workout`)}</div>
-            <div class="text-muted weekly-plan-meta">${plan.exercises.length} exercises · ${plan.total_duration_min || 0} min · ${plan.total_estimated_calories_burn || 0} kcal</div>
+            <div class="weekly-plan-title">${escapeHtml(plan.day)} • ${escapeHtml(plan.plan_name || `${plan.day} Workout`)}</div>
+            <div class="text-muted weekly-plan-meta">${plan.exercises.length} exercises • ${plan.total_duration_min || 0} min • ${plan.total_estimated_calories_burn || 0} kcal</div>
           </div>
           <span class="badge ${plan.day === getDayName() ? 'badge-accent' : 'badge-info'}">${plan.day === getDayName() ? 'Today' : 'Planned'}</span>
         </div>
@@ -315,7 +342,7 @@ function renderWeeklyPlan(plans) {
               <div class="weekly-plan-visual">${renderExerciseMedia(exercise)}</div>
               <div class="weekly-plan-copy">
                 <div class="weekly-plan-exercise-title">${escapeHtml(exercise.name)}</div>
-                <div class="text-muted weekly-plan-exercise-meta">${buildWeeklyExerciseMeta(exercise)}</div>
+                <div class="text-muted weekly-plan-exercise-meta">${escapeHtml(buildWeeklyExerciseMeta(exercise))}</div>
                 <div class="weekly-plan-posture">${escapeHtml(exercise.description || exercise.muscle_group || 'Workout movement')}</div>
                 <div class="text-muted weekly-plan-cues">${(exercise.instructions || []).slice(0, 2).map(escapeHtml).join(' ')}</div>
               </div>
@@ -335,7 +362,7 @@ function buildWeeklyExerciseMeta(exercise) {
   else if (exercise.duration_min) parts.push(`${exercise.duration_min} min`);
   if (exercise.rest_seconds) parts.push(`${exercise.rest_seconds}s rest`);
   if (exercise.estimated_calories_burn) parts.push(`${exercise.estimated_calories_burn} kcal`);
-  return parts.join(' · ');
+  return parts.join(' • ');
 }
 
 function renderSessionState() {
@@ -356,8 +383,16 @@ function renderSessionState() {
     const check = document.getElementById(`ex-check-${index}`);
     if (!card || !check) return;
 
+    card.classList.remove('completed');
+    card.style.opacity = '';
+    check.style.background = '';
+    check.style.borderColor = '';
+    check.style.color = '';
+    check.innerHTML = '';
+
     const key = getCompletedExerciseKey(exercise);
-    const isDone = completedIds.has(key) || index < (session?.current_exercise_index || 0 && !session?.current_exercise ? session.current_exercise_index : -1);
+    const isDone = completedIds.has(key) || index < (((session?.current_exercise_index || 0) && !session?.current_exercise) ? session.current_exercise_index : -1);
+
     if (isDone) {
       card.classList.add('completed');
       card.style.opacity = '0.72';
@@ -371,6 +406,12 @@ function renderSessionState() {
   const finishBtn = document.getElementById('finish-workout-btn');
   if (finishBtn) {
     finishBtn.style.display = session ? 'inline-flex' : 'none';
+  }
+
+  const activeExercise = session?.current_exercise || currentExercises[currentExerciseIndex] || null;
+  const timerMedia = document.getElementById('timer-media');
+  if (timerMedia && activeExercise) {
+    timerMedia.innerHTML = renderExerciseMedia(activeExercise);
   }
 }
 
@@ -391,7 +432,9 @@ async function startExerciseFlow(index) {
   currentExerciseIndex = index;
   timerSeconds = 0;
   updateTimerDisplay();
-  setText('timer-exercise-name', `${exercise.name} · ${exercise.rest_seconds || 0}s rest`);
+  setText('timer-exercise-name', `${exercise.name} • ${exercise.rest_seconds || 0}s rest`);
+  const timerMedia = document.getElementById('timer-media');
+  if (timerMedia) timerMedia.innerHTML = renderExerciseMedia(exercise);
   document.getElementById('timer-card').style.display = 'block';
   document.getElementById('timer-start').style.display = 'inline-flex';
   document.getElementById('timer-pause').style.display = 'none';
@@ -416,6 +459,7 @@ async function completeExerciseFlow(index) {
       duration_seconds: durationSeconds,
       calories_burned: caloriesBurned
     });
+
     currentSession = normalizeActiveSession(response) || {
       ...currentSession,
       current_exercise_index: index + 1,
@@ -423,6 +467,7 @@ async function completeExerciseFlow(index) {
       total_duration_seconds: (currentSession.total_duration_seconds || 0) + durationSeconds,
       total_calories_burned: (currentSession.total_calories_burned || 0) + caloriesBurned
     };
+
     clearInterval(timerInterval);
     timerSeconds = 0;
     updateTimerDisplay();
@@ -521,6 +566,8 @@ async function resetWholeWorkout() {
   }
 
   currentSession = null;
+  const timerMedia = document.getElementById('timer-media');
+  if (timerMedia) timerMedia.innerHTML = '';
   await loadWorkoutPlan();
   showToast('Workout reset', 'info');
 }
@@ -568,6 +615,18 @@ function showWorkoutEmptyState(error) {
 function getCompletedExerciseKey(item) {
   if (typeof item === 'string') return item;
   return item?.name || '';
+}
+
+function resolveExerciseMediaUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value) || value.startsWith('data:')) return value;
+  if (value.startsWith('/')) return `${getBackendOrigin()}${value}`;
+  return `${getBackendOrigin()}/${value.replace(/^\/+/, '')}`;
+}
+
+function getBackendOrigin() {
+  return String(CONFIG.API_BASE || '').replace(/\/api\/?$/, '');
 }
 
 function getWorkoutPoseMarkup(name) {
