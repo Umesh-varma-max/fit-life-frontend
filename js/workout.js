@@ -1,325 +1,588 @@
-// workout.js - Goal-based weekly workout view with posture guidance
-
-let exercises = [];
-let completedCount = 0;
+let workoutPlanData = null;
+let todayPlan = null;
+let activeSession = null;
+let currentExerciseIndex = 0;
+let completedExercises = [];
+let totalDurationSeconds = 0;
+let totalCaloriesBurned = 0;
 let timerInterval = null;
-let timerSeconds = 0;
-let currentExerciseName = '';
+let timerRemaining = 0;
+let timerPhase = 'exercise';
+let sessionRunning = false;
+let sessionStartedAt = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
+  bindWorkoutControls();
   loadWorkoutPlan();
-  initTimer();
 });
 
-async function loadWorkoutPlan() {
+function bindWorkoutControls() {
+  document.getElementById('start-session-btn')?.addEventListener('click', handleStartOrResume);
+  document.getElementById('complete-current-btn')?.addEventListener('click', completeCurrentExercise);
+  document.getElementById('reset-session-btn')?.addEventListener('click', resetWorkoutSession);
+}
+
+async function loadWorkoutPlan(showLoading = true) {
+  if (showLoading) {
+    renderLoadingState();
+  }
+
   try {
     const data = await workoutAPI.getPlan();
-    const plans = data.plan || [];
-    const today = getDayName();
+    workoutPlanData = data;
+    todayPlan = data.today_plan || inferTodayPlan(data.plan || []);
 
-    renderWeeklySummary(data);
-    renderWeeklyPlan(plans);
+    renderGoalHero(data);
+    renderWorkoutStats(data.workout_stats || {});
+    renderTodayPlan(todayPlan);
+    renderWeeklyPlan(data.plan || []);
 
-    const todayPlan = plans.find(plan => plan.day === today);
-    if (todayPlan && todayPlan.exercises && todayPlan.exercises.length > 0) {
-      exercises = todayPlan.exercises;
-      renderExercises(todayPlan);
-      updateSessionProgress();
-    } else {
-      showRestDay();
-    }
-  } catch (err) {
-    if (err.status === 404) {
-      showRestDay();
+    if (data.active_session) {
+      hydrateActiveSession(data.active_session);
+      renderSessionState();
       return;
     }
-    console.error('Failed to load workout plan:', err);
-    showEmptyState('exercises-container', 'Workout', 'Failed to load', 'Could not fetch your workout plan');
+
+    try {
+      const activeData = await workoutAPI.getActiveSession();
+      const session = activeData.active_session || activeData.session || activeData;
+      if (session && (session.id || session.session_id)) {
+        hydrateActiveSession(session);
+        renderSessionState();
+        return;
+      }
+    } catch (error) {
+      if (error.status !== 404) {
+        console.error('Failed to fetch active workout session:', error);
+      }
+    }
+
+    clearSessionState();
+    renderSessionState();
+  } catch (error) {
+    console.error('Failed to load workout plan:', error);
+    renderWorkoutError(error.message || 'Failed to load your workout plan.');
   }
 }
 
-function renderWeeklySummary(data) {
-  const goal = document.getElementById('workout-goal');
-  const duration = document.getElementById('weekly-duration');
-  const burn = document.getElementById('weekly-burn');
-  const days = document.getElementById('weekly-days');
-  const source = document.getElementById('weekly-plan-source');
-
-  if (goal) goal.textContent = formatEnumLabel(data.goal || data.template_key || data.source || 'plan');
-  if (duration) duration.textContent = `${data.total_duration_min || 0} min`;
-  if (burn) burn.textContent = `${data.total_estimated_calories_burn || 0} kcal`;
-  if (days) days.textContent = `${data.active_days || 0} / ${data.total_days || 7}`;
-  if (source) source.textContent = data.source === 'custom' ? 'Custom Plan' : 'Goal Plan';
+function renderLoadingState() {
+  document.getElementById('goal-label').textContent = 'Refreshing your workout plan...';
+  document.getElementById('goal-summary').textContent = 'Using your latest profile to rebuild goal, BMI, and body-fat aware workouts.';
+  document.getElementById('today-plan-title').textContent = 'Loading today\'s workout...';
+  document.getElementById('today-plan-meta').textContent = 'Fetching updated exercises from the backend.';
+  document.getElementById('exercises-container').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-state-icon">Load</div>
+      <div class="empty-state-title">Refreshing workout plan...</div>
+      <p class="empty-state-text">Your new workout will reflect the latest profile changes.</p>
+    </div>
+  `;
 }
 
-function renderExercises(todayPlan) {
-  const container = document.getElementById('exercises-container');
-  if (!container) return;
-
-  container.innerHTML = `
-    <div class="card mb-3 animate-fade-in-up">
-      <div class="card-body workout-day-summary">
-        <div class="workout-day-summary-copy">
-          <div class="workout-day-summary-title">${escapeHtml(todayPlan.plan_name || "Today's Workout")}</div>
-          <div class="text-muted workout-day-summary-meta">${todayPlan.exercises.length} exercises · ${todayPlan.total_duration_min || 0} min · ${todayPlan.total_estimated_calories_burn || 0} kcal burn</div>
-        </div>
-        <span class="badge badge-accent">Today</span>
-      </div>
+function renderWorkoutError(message) {
+  document.getElementById('exercises-container').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-state-icon">Warn</div>
+      <div class="empty-state-title">Could not load workout plan</div>
+      <p class="empty-state-text">${escapeHtml(message)}</p>
     </div>
-    ${exercises.map((exercise, index) => renderExerciseCard(exercise, index)).join('')}
   `;
+}
 
-  container.querySelectorAll('.start-timer-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      startExerciseTimer(btn.dataset.name);
-    });
-  });
+function renderGoalHero(data) {
+  const goalLabel = data.goal_label || formatEnumLabel(data.goal || 'maintenance');
+  const goalBadge = data.goal_badge || goalLabel;
+  const etaWeeks = Number(data.goal_eta_weeks || 0);
+  const bmiCategory = data.bmi_category || 'Unknown';
+  const bodyFatCategory = data.body_fat_category || 'Unknown';
+  const goalSummary = buildGoalSummary(goalLabel, bmiCategory, bodyFatCategory, etaWeeks);
 
-  container.querySelectorAll('.complete-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      completeExercise(parseInt(btn.dataset.index, 10), btn.dataset.name, parseInt(btn.dataset.duration, 10) || 0);
-    });
-  });
+  setText('goal-label', goalLabel);
+  setText('goal-badge', goalBadge);
+  setText('goal-eta', etaWeeks > 0 ? `${etaWeeks} week goal window` : 'Goal ETA pending');
+  setText('goal-bmi-category', `BMI ${bmiCategory}`);
+  setText('goal-bfp-category', `BFP ${bodyFatCategory}`);
+  setText('goal-summary', goalSummary);
+
+  const heroImage = document.getElementById('goal-hero-image');
+  const fallback = document.getElementById('goal-hero-fallback');
+  const heroUrl = normalizeMediaUrl(data.hero_image_url || '');
+  if (heroImage && heroUrl) {
+    heroImage.src = heroUrl;
+    heroImage.classList.remove('hidden');
+    fallback?.classList.add('hidden');
+  } else {
+    heroImage?.classList.add('hidden');
+    fallback?.classList.remove('hidden');
+  }
+}
+
+function buildGoalSummary(goalLabel, bmiCategory, bodyFatCategory, etaWeeks) {
+  const timeline = etaWeeks > 0 ? `${etaWeeks} week target` : 'adaptive timeline';
+  return `Adaptive workouts now follow your ${goalLabel} plan, ${bmiCategory} BMI, ${bodyFatCategory.toLowerCase()} body-fat status, and ${timeline}.`;
+}
+
+function renderWorkoutStats(stats) {
+  setText('stats-exercises', stats.exercise_count || 0);
+  setText('stats-minutes', stats.minutes || 0);
+  setText('stats-calories', stats.calories || 0);
+}
+
+function renderTodayPlan(plan) {
+  if (!plan || !Array.isArray(plan.exercises) || !plan.exercises.length) {
+    setText('today-plan-title', 'Recovery day');
+    setText('today-plan-meta', 'No workout is scheduled for today. Your next active day will appear in the weekly plan below.');
+    document.getElementById('exercises-container').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">Rest</div>
+        <div class="empty-state-title">No exercises for today</div>
+        <p class="empty-state-text">You can recover today and check the weekly plan for the next active session.</p>
+      </div>
+    `;
+    return;
+  }
+
+  setText('today-plan-title', plan.plan_name || 'Today\'s Workout');
+  setText('today-plan-meta', `${plan.exercises.length} exercises · ${plan.total_duration_min || 0} min · ${plan.total_estimated_calories_burn || 0} kcal`);
+
+  document.getElementById('exercises-container').innerHTML = plan.exercises.map((exercise, index) => renderExerciseCard(exercise, index)).join('');
 }
 
 function renderExerciseCard(exercise, index) {
-  const details = [];
-  if (exercise.sets) details.push(`${exercise.sets} sets`);
-  if (exercise.reps) details.push(`${exercise.reps} reps`);
-  details.push(`${exercise.estimated_duration_min || exercise.duration_min || 0} min`);
-  details.push(`${exercise.estimated_calories_burn || 0} kcal`);
+  const mediaUrl = resolveExerciseMedia(exercise);
+  const description = exercise.description || 'Use controlled posture and smooth breathing throughout the exercise.';
+  const meta = buildExerciseMeta(exercise);
 
   return `
-    <div class="card mb-2 hover-lift animate-fade-in-up exercise-card" id="ex-card-${index}" style="animation-delay: ${index * 0.08}s;">
+    <article class="card exercise-card animate-fade-in-up" id="exercise-card-${index}" style="animation-delay:${index * 0.06}s;">
       <div class="card-body exercise-card-body">
-        <div class="exercise-check" id="ex-check-${index}"></div>
         <div class="exercise-visual">
-          ${getWorkoutPoseMarkup(exercise.name)}
+          ${mediaUrl ? `<img src="${mediaUrl}" alt="${escapeHtml(exercise.name || 'Exercise')}" class="exercise-media">` : renderExerciseFallback(exercise)}
         </div>
         <div class="exercise-copy">
           <div class="exercise-name">${escapeHtml(exercise.name || 'Exercise')}</div>
-          <div class="text-muted exercise-meta">${details.join(' · ')}</div>
+          <div class="exercise-meta">${meta}</div>
           <div class="exercise-posture-box">
-            <div class="exercise-posture-label">Posture</div>
-            <div class="exercise-posture-title">${escapeHtml(exercise.posture || 'Controlled neutral posture')}</div>
-            <div class="text-muted exercise-posture-cues">${Array.isArray(exercise.posture_cues) ? exercise.posture_cues.map(escapeHtml).join(' ') : ''}</div>
+            <div class="exercise-posture-label">${escapeHtml(exercise.muscle_group || 'Movement')}</div>
+            <div class="exercise-posture-title">${escapeHtml(description)}</div>
+            <div class="exercise-posture-cues">${escapeHtml(buildInstructionSnippet(exercise))}</div>
           </div>
         </div>
-        <div class="exercise-actions">
-          <button class="btn btn-outline btn-sm start-timer-btn" data-index="${index}" data-name="${escapeHtml(exercise.name || 'Exercise')}">Timer</button>
-          <button class="btn btn-primary btn-sm complete-btn" data-index="${index}" data-name="${escapeHtml(exercise.name || 'Exercise')}" data-duration="${exercise.duration_min || exercise.estimated_duration_min || 0}">Done</button>
-        </div>
       </div>
+    </article>
+  `;
+}
+
+function renderExerciseFallback(exercise) {
+  const description = escapeHtml(exercise.description || 'Demo not available');
+  const posture = escapeHtml(buildInstructionSnippet(exercise));
+  return `
+    <div class="exercise-media-fallback">
+      <div class="exercise-media-fallback-icon">FIT</div>
+      <div class="exercise-media-fallback-title">${escapeHtml(exercise.name || 'Exercise')}</div>
+      <div class="exercise-media-fallback-copy">${description}</div>
+      <div class="exercise-media-fallback-meta">${posture}</div>
     </div>
   `;
 }
 
-function renderWeeklyPlan(plans) {
-  const container = document.getElementById('weekly-plan-container');
-  if (!container) return;
-
-  container.innerHTML = plans.map((plan, index) => `
-    <div class="card mb-2 hover-lift animate-fade-in-up" style="animation-delay: ${index * 0.05}s;">
-      <div class="card-body weekly-plan-card-body">
-        <div class="weekly-plan-head">
-          <div class="weekly-plan-head-copy">
-            <div class="weekly-plan-title">${escapeHtml(plan.day)} · ${escapeHtml(plan.plan_name || `${plan.day} Workout`)}</div>
-            <div class="text-muted weekly-plan-meta">${plan.exercises.length} exercises · ${plan.total_duration_min || 0} min · ${plan.total_estimated_calories_burn || 0} kcal burn</div>
-          </div>
-          <span class="badge ${plan.day === getDayName() ? 'badge-accent' : 'badge-outline'}">${plan.day === getDayName() ? 'Today' : 'Planned'}</span>
-        </div>
-        <div class="weekly-plan-list">
-          ${plan.exercises.map(exercise => `
-            <div class="weekly-plan-item">
-              <div class="weekly-plan-visual">
-                ${getWorkoutPoseMarkup(exercise.name)}
-              </div>
-              <div class="weekly-plan-copy">
-                <div class="weekly-plan-exercise-title">${escapeHtml(exercise.name)}</div>
-                <div class="text-muted weekly-plan-exercise-meta">${buildExerciseMeta(exercise)}</div>
-                <div class="weekly-plan-posture">${escapeHtml(exercise.posture || 'Controlled neutral posture')}</div>
-                <div class="text-muted weekly-plan-cues">${Array.isArray(exercise.posture_cues) ? exercise.posture_cues.map(escapeHtml).join(' ') : ''}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    </div>
-  `).join('');
+function buildInstructionSnippet(exercise) {
+  const instructions = Array.isArray(exercise.instructions) ? exercise.instructions : [];
+  const tips = Array.isArray(exercise.exercise_tips) ? exercise.exercise_tips : [];
+  return instructions[0] || tips[0] || 'Keep a stable posture and move with control.';
 }
 
 function buildExerciseMeta(exercise) {
   const parts = [];
   if (exercise.sets) parts.push(`${exercise.sets} sets`);
   if (exercise.reps) parts.push(`${exercise.reps} reps`);
-  parts.push(`${exercise.estimated_duration_min || exercise.duration_min || 0} min`);
+  if (exercise.duration_seconds) {
+    parts.push(`${exercise.duration_seconds} sec`);
+  } else if (exercise.duration_min) {
+    parts.push(`${exercise.duration_min} min`);
+  }
+  if (exercise.rest_seconds) parts.push(`${exercise.rest_seconds} sec rest`);
   parts.push(`${exercise.estimated_calories_burn || 0} kcal`);
   return parts.join(' · ');
 }
 
-async function completeExercise(index, name, durationMin) {
-  const card = document.getElementById(`ex-card-${index}`);
-  const check = document.getElementById(`ex-check-${index}`);
+function renderWeeklyPlan(plans) {
+  const container = document.getElementById('weekly-plan-container');
+  if (!container) return;
 
-  if (card && card.classList.contains('completed')) return;
-
-  if (check) {
-    check.style.background = 'var(--accent)';
-    check.style.borderColor = 'var(--accent)';
-    check.innerHTML = '✓';
-    check.style.color = '#fff';
-  }
-  if (card) {
-    card.classList.add('completed');
-    card.style.opacity = '0.72';
+  if (!plans.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">Week</div>
+        <div class="empty-state-title">No weekly plan available</div>
+        <p class="empty-state-text">Save your health profile to generate a goal-based weekly workout plan.</p>
+      </div>
+    `;
+    return;
   }
 
-  completedCount++;
-  updateSessionProgress();
-
-  try {
-    await workoutAPI.logTimer({
-      exercise_name: name,
-      duration_seconds: (durationMin || 1) * 60,
-      log_date: todayDate(),
-    });
-  } catch (err) {
-    console.error('Failed to log exercise:', err);
-  }
-
-  showToast(`${name} completed`, 'success');
-
-  if (completedCount >= exercises.length) {
-    document.getElementById('finish-workout-btn').style.display = 'inline-flex';
-  }
+  container.innerHTML = plans.map((plan) => `
+    <div class="workout-week-card ${plan.day === getDayName() ? 'workout-week-card-today' : ''}">
+      <div class="workout-week-head">
+        <div>
+          <div class="weekly-plan-title">${escapeHtml(plan.day || '--')}</div>
+          <div class="weekly-plan-meta">${escapeHtml(plan.focus_area || plan.plan_name || 'Workout focus')}</div>
+        </div>
+        <span class="badge ${plan.day === getDayName() ? 'badge-accent' : 'badge-info'}">${plan.day === getDayName() ? 'Today' : 'Planned'}</span>
+      </div>
+      <div class="workout-week-summary">${(plan.exercises || []).length} exercises · ${plan.total_duration_min || 0} min · ${plan.total_estimated_calories_burn || 0} kcal</div>
+      <div class="weekly-plan-list">
+        ${(plan.exercises || []).map((exercise) => `
+          <div class="weekly-plan-item">
+            <div class="weekly-plan-visual">
+              ${resolveExerciseMedia(exercise)
+                ? `<img src="${resolveExerciseMedia(exercise)}" alt="${escapeHtml(exercise.name || 'Exercise')}" class="exercise-media">`
+                : renderExerciseFallback(exercise)}
+            </div>
+            <div class="weekly-plan-copy">
+              <div class="weekly-plan-exercise-title">${escapeHtml(exercise.name || 'Exercise')}</div>
+              <div class="weekly-plan-exercise-meta">${buildExerciseMeta(exercise)}</div>
+              <div class="weekly-plan-posture">${escapeHtml(exercise.muscle_group || 'Full body')}</div>
+              <div class="weekly-plan-cues">${escapeHtml(buildInstructionSnippet(exercise))}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
-function updateSessionProgress() {
-  const total = exercises.length;
-  const progress = document.getElementById('session-progress');
-  const bar = document.getElementById('session-bar');
-  const finishBtn = document.getElementById('finish-workout-btn');
-
-  if (progress) progress.textContent = `${completedCount} / ${total}`;
-  if (bar) bar.style.width = `${percentage(completedCount, total)}%`;
-  if (finishBtn) {
-    finishBtn.style.display = completedCount > 0 ? 'inline-flex' : 'none';
-    finishBtn.onclick = () => {
-      showToast('Workout session complete! Great job!', 'success');
-      setTimeout(() => {
-        window.location.href = 'dashboard.html';
-      }, 1200);
-    };
+async function handleStartOrResume() {
+  if (!todayPlan || !todayPlan.exercises || !todayPlan.exercises.length) {
+    showToast('No workout is scheduled for today.', 'warning');
+    return;
   }
-}
 
-function initTimer() {
-  const startBtn = document.getElementById('timer-start');
-  const pauseBtn = document.getElementById('timer-pause');
-  const resetBtn = document.getElementById('timer-reset');
-  const doneBtn = document.getElementById('timer-done');
-
-  startBtn.addEventListener('click', () => {
-    startBtn.style.display = 'none';
-    pauseBtn.style.display = 'inline-flex';
-    timerInterval = setInterval(tickTimer, 1000);
-  });
-
-  pauseBtn.addEventListener('click', () => {
-    clearInterval(timerInterval);
-    pauseBtn.style.display = 'none';
-    startBtn.style.display = 'inline-flex';
-    startBtn.textContent = 'Resume';
-  });
-
-  resetBtn.addEventListener('click', () => {
-    clearInterval(timerInterval);
-    timerSeconds = 0;
-    updateTimerDisplay();
-    pauseBtn.style.display = 'none';
-    startBtn.style.display = 'inline-flex';
-    startBtn.textContent = 'Start';
-  });
-
-  doneBtn.addEventListener('click', () => {
-    clearInterval(timerInterval);
-    document.getElementById('timer-card').style.display = 'none';
-
-    const index = exercises.findIndex(exercise => {
-      const exerciseName = typeof exercise === 'object' ? exercise.name : String(exercise);
-      return exerciseName === currentExerciseName;
-    });
-
-    if (index >= 0) {
-      const duration = exercises[index].duration_min || exercises[index].estimated_duration_min || Math.ceil(timerSeconds / 60);
-      completeExercise(index, currentExerciseName, duration);
+  if (!activeSession) {
+    try {
+      const response = await workoutAPI.startSession({ day: todayPlan.day || getDayName() });
+      const session = response.active_session || response.session || response;
+      hydrateActiveSession(session);
+      showToast('Workout session started', 'success');
+    } catch (error) {
+      console.error('Failed to start workout session:', error);
+      showToast(error.message || 'Could not start workout session', 'error');
+      return;
     }
+  }
 
-    timerSeconds = 0;
-    updateTimerDisplay();
+  startCurrentTimer();
+}
+
+function hydrateActiveSession(session) {
+  activeSession = {
+    ...session,
+    id: session.id || session.session_id
+  };
+  currentExerciseIndex = Number(session.current_exercise_index || 0);
+  completedExercises = Array.isArray(session.completed_exercises) ? [...session.completed_exercises] : [];
+  totalDurationSeconds = Number(session.total_duration_seconds || 0);
+  totalCaloriesBurned = Number(session.total_calories_burned || 0);
+
+  if (session.current_exercise) {
+    const idx = findExerciseIndex(session.current_exercise);
+    if (idx >= 0) currentExerciseIndex = idx;
+  }
+}
+
+function clearSessionState() {
+  stopTimer();
+  activeSession = null;
+  currentExerciseIndex = 0;
+  completedExercises = [];
+  totalDurationSeconds = 0;
+  totalCaloriesBurned = 0;
+  timerRemaining = 0;
+  timerPhase = 'exercise';
+  sessionRunning = false;
+  sessionStartedAt = 0;
+}
+
+function renderSessionState() {
+  const startButton = document.getElementById('start-session-btn');
+  const completeButton = document.getElementById('complete-current-btn');
+  const resetButton = document.getElementById('reset-session-btn');
+  const timerSection = document.getElementById('timer-section');
+  const completionSection = document.getElementById('completion-summary');
+
+  completionSection?.classList.add('hidden');
+
+  if (!todayPlan || !todayPlan.exercises || !todayPlan.exercises.length) {
+    startButton.textContent = 'No Workout Today';
+    startButton.disabled = true;
+    completeButton.classList.add('hidden');
+    resetButton.classList.add('hidden');
+    timerSection.classList.add('hidden');
+    return;
+  }
+
+  startButton.disabled = false;
+  if (!activeSession) {
+    startButton.textContent = 'Start Workout';
+    completeButton.classList.add('hidden');
+    resetButton.classList.add('hidden');
+    timerSection.classList.add('hidden');
+    highlightCompletedCards();
+    return;
+  }
+
+  startButton.textContent = sessionRunning ? 'Session Running' : 'Resume Workout';
+  completeButton.classList.remove('hidden');
+  resetButton.classList.remove('hidden');
+  timerSection.classList.remove('hidden');
+  updateActiveExercisePanel();
+  highlightCompletedCards();
+}
+
+function updateActiveExercisePanel() {
+  const exercise = getCurrentExercise();
+  const nextExercise = getNextExercise();
+  const completedCount = completedExercises.length;
+
+  setText('completed-count', `${completedCount} completed`);
+  setText('duration-so-far', `${Math.round(totalDurationSeconds)} sec`);
+  setText('calories-so-far', `${Math.round(totalCaloriesBurned)} kcal`);
+
+  if (!exercise) {
+    setText('active-exercise-name', 'Workout complete');
+    setText('active-exercise-meta', 'No active exercise remaining.');
+    setText('next-exercise-name', '--');
+    setText('next-exercise-meta', '--');
+    document.getElementById('active-media-block').innerHTML = renderExerciseFallback({ name: 'Workout Complete', description: 'Great job finishing today\'s session.' });
+    return;
+  }
+
+  setText('active-exercise-name', exercise.name || 'Exercise');
+  setText('active-exercise-meta', buildExerciseMeta(exercise));
+  setText('next-exercise-name', nextExercise?.name || 'Last exercise');
+  setText('next-exercise-meta', nextExercise ? buildExerciseMeta(nextExercise) : 'Complete this exercise to finish the workout');
+  renderActiveExerciseMedia(exercise);
+
+  if (!timerRemaining) {
+    setTimerForPhase(timerPhase, getPhaseDuration(exercise, timerPhase));
+  }
+}
+
+function renderActiveExerciseMedia(exercise) {
+  const mediaBlock = document.getElementById('active-media-block');
+  if (!mediaBlock) return;
+
+  const mediaUrl = resolveExerciseMedia(exercise);
+  if (mediaUrl) {
+    mediaBlock.innerHTML = `<img src="${mediaUrl}" alt="${escapeHtml(exercise.name || 'Exercise')}" class="exercise-media">`;
+    return;
+  }
+
+  mediaBlock.innerHTML = renderExerciseFallback(exercise);
+}
+
+function highlightCompletedCards() {
+  document.querySelectorAll('[id^="exercise-card-"]').forEach((card, index) => {
+    card.classList.toggle('completed', index < completedExercises.length);
+    card.classList.toggle('exercise-card-active', activeSession && index === currentExerciseIndex);
   });
 }
 
-function startExerciseTimer(name) {
-  currentExerciseName = name;
-  document.getElementById('timer-card').style.display = 'block';
-  document.getElementById('timer-exercise-name').textContent = name;
-  timerSeconds = 0;
-  updateTimerDisplay();
-  document.getElementById('timer-card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+function getCurrentExercise() {
+  return todayPlan?.exercises?.[currentExerciseIndex] || activeSession?.current_exercise || null;
 }
 
-function tickTimer() {
-  timerSeconds++;
+function getNextExercise() {
+  return todayPlan?.exercises?.[currentExerciseIndex + 1] || null;
+}
+
+function findExerciseIndex(exercise) {
+  if (!exercise || !todayPlan?.exercises?.length) return -1;
+  return todayPlan.exercises.findIndex((item) => item.name === exercise.name);
+}
+
+function startCurrentTimer() {
+  const exercise = getCurrentExercise();
+  if (!exercise) return;
+
+  if (!timerRemaining) {
+    timerPhase = 'exercise';
+    setTimerForPhase(timerPhase, getPhaseDuration(exercise, timerPhase));
+  }
+
+  sessionRunning = true;
+  sessionStartedAt = Date.now();
+  document.getElementById('start-session-btn').textContent = 'Session Running';
+  document.getElementById('session-status-badge').textContent = timerPhase === 'rest' ? 'Rest Time' : 'Exercise Time';
+
+  stopTimer();
+  timerInterval = setInterval(() => {
+    timerRemaining = Math.max(0, timerRemaining - 1);
+    totalDurationSeconds += 1;
+    updateTimerDisplay();
+    setText('duration-so-far', `${Math.round(totalDurationSeconds)} sec`);
+
+    if (timerRemaining <= 0) {
+      handleTimerPhaseComplete();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  sessionRunning = false;
+}
+
+function setTimerForPhase(phase, seconds) {
+  timerPhase = phase;
+  timerRemaining = Math.max(0, Number(seconds || 0));
+  setText('timer-phase-label', phase === 'rest' ? 'Rest Time' : 'Exercise Time');
+  setText('session-status-badge', phase === 'rest' ? 'Rest Time' : 'Exercise Time');
   updateTimerDisplay();
 }
 
 function updateTimerDisplay() {
-  const display = document.getElementById('timer-display');
-  if (!display) return;
-  const min = Math.floor(timerSeconds / 60);
-  const sec = timerSeconds % 60;
-  display.textContent = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  const minutes = Math.floor(timerRemaining / 60);
+  const seconds = timerRemaining % 60;
+  setText('timer-display', `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`);
 }
 
-function showRestDay() {
-  const container = document.getElementById('exercises-container');
-  const sessionCard = document.getElementById('session-card');
-  if (sessionCard) sessionCard.style.display = 'none';
-
-  container.innerHTML = `
-    <div class="card animate-fade-in-up">
-      <div class="card-body" style="text-align: center; padding: 60px 24px;">
-        <div style="font-size: 3rem; margin-bottom: 16px;">Rest</div>
-        <h3 style="color: var(--text); margin-bottom: 8px;">Recovery Day</h3>
-        <p class="text-muted" style="max-width: 420px; margin: 0 auto; line-height: 1.6;">
-          No workout is scheduled for today. Use the weekly plan below to review the next active day and its posture cues.
-        </p>
-      </div>
-    </div>
-  `;
+function getPhaseDuration(exercise, phase) {
+  if (!exercise) return 0;
+  if (phase === 'rest') return Number(exercise.rest_seconds || 0);
+  return Number(exercise.duration_seconds || (Number(exercise.duration_min || 0) * 60) || 30);
 }
 
-function getWorkoutPoseMarkup(name) {
-  const lower = /squat|lunge|leg|walk|jog|hike|cycling|bike|cardio|jump/i.test(name);
-  const push = /press|push|dip/i.test(name);
-  const pull = /pull|row|curl|deadlift/i.test(name);
-  const accent = lower ? '#00b4d8' : push ? '#00d4aa' : pull ? '#ff8a65' : '#7ccf7a';
-  const arms = push ? 'M38 28 L18 36 M38 28 L58 36' : pull ? 'M38 28 L20 22 M38 28 L56 22' : 'M38 28 L20 32 M38 28 L56 32';
-  const legs = lower ? 'M38 42 L24 60 M38 42 L50 58 M24 60 L18 68 M50 58 L56 68' : 'M38 42 L30 62 M38 42 L48 62';
+async function handleTimerPhaseComplete() {
+  stopTimer();
 
-  return `
-    <svg width="76" height="76" viewBox="0 0 76 76" fill="none" aria-hidden="true">
-      <circle cx="38" cy="14" r="7" fill="${accent}" opacity="0.95"/>
-      <path d="M38 22 L38 42" stroke="${accent}" stroke-width="5" stroke-linecap="round"/>
-      <path d="${arms}" stroke="${accent}" stroke-width="5" stroke-linecap="round"/>
-      <path d="${legs}" stroke="${accent}" stroke-width="5" stroke-linecap="round"/>
-    </svg>
-  `;
+  if (timerPhase === 'rest') {
+    timerPhase = 'exercise';
+    setTimerForPhase('exercise', getPhaseDuration(getCurrentExercise(), 'exercise'));
+    startCurrentTimer();
+    return;
+  }
+
+  await completeCurrentExercise();
+}
+
+async function completeCurrentExercise() {
+  const exercise = getCurrentExercise();
+  if (!activeSession || !activeSession.id || !exercise) return;
+
+  stopTimer();
+  const duration = getPhaseDuration(exercise, 'exercise');
+  const calories = Number(exercise.estimated_calories_burn || 0);
+
+  try {
+    await workoutAPI.completeExercise(activeSession.id, {
+      duration_seconds: duration,
+      calories_burned: calories
+    });
+  } catch (error) {
+    console.error('Failed to complete exercise:', error);
+    showToast(error.message || 'Could not mark the exercise complete', 'error');
+    return;
+  }
+
+  completedExercises.push(exercise.name || `Exercise ${currentExerciseIndex + 1}`);
+  totalCaloriesBurned += calories;
+  currentExerciseIndex += 1;
+
+  if (!getCurrentExercise()) {
+    await finishWorkoutSession();
+    return;
+  }
+
+  setTimerForPhase('rest', getPhaseDuration(exercise, 'rest'));
+  renderSessionState();
+  updateActiveExercisePanel();
+  showToast(`${exercise.name || 'Exercise'} completed`, 'success');
+
+  if (timerRemaining > 0) {
+    startCurrentTimer();
+  } else {
+    timerPhase = 'exercise';
+    setTimerForPhase('exercise', getPhaseDuration(getCurrentExercise(), 'exercise'));
+  }
+}
+
+async function finishWorkoutSession() {
+  if (!activeSession || !activeSession.id) return;
+
+  try {
+    await workoutAPI.completeSession(activeSession.id, {
+      total_duration_seconds: Math.round(totalDurationSeconds),
+      total_calories_burned: Math.round(totalCaloriesBurned),
+      log_date: todayDate()
+    });
+    showToast('Workout complete!', 'success');
+    renderCompletionSummary();
+    clearSessionState();
+    await loadWorkoutPlan(false);
+    try {
+      await activityAPI.getDay(todayDate());
+    } catch {
+      // Activity refresh is optional for this page.
+    }
+  } catch (error) {
+    console.error('Failed to complete workout session:', error);
+    showToast(error.message || 'Could not complete workout session', 'error');
+  }
+}
+
+function renderCompletionSummary() {
+  const section = document.getElementById('completion-summary');
+  section?.classList.remove('hidden');
+  setText('complete-goal', workoutPlanData?.goal_label || '--');
+  setText('complete-exercises', completedExercises.length);
+  setText('complete-minutes', Math.round(totalDurationSeconds / 60));
+  setText('complete-calories', Math.round(totalCaloriesBurned));
+}
+
+async function resetWorkoutSession() {
+  if (!activeSession || !activeSession.id) return;
+
+  try {
+    await workoutAPI.resetSession(activeSession.id);
+    showToast('Workout reset successfully', 'success');
+    clearSessionState();
+    renderSessionState();
+    await loadWorkoutPlan(false);
+  } catch (error) {
+    console.error('Failed to reset workout session:', error);
+    showToast(error.message || 'Could not reset workout session', 'error');
+  }
+}
+
+function inferTodayPlan(plans) {
+  return plans.find((item) => item.day === getDayName()) || null;
+}
+
+function resolveExerciseMedia(exercise) {
+  const media = exercise?.gif_url || exercise?.image_url || exercise?.video_url || exercise?.demo_media_url || '';
+  return normalizeMediaUrl(media);
+}
+
+function normalizeMediaUrl(url) {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url) || /^data:/i.test(url)) return url;
+  if (url.startsWith('/')) {
+    return `${CONFIG.API_BASE.replace(/\/api$/, '')}${url}`;
+  }
+  return url;
+}
+
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) element.textContent = String(value);
 }
 
 function escapeHtml(str) {
   const div = document.createElement('div');
-  div.textContent = str;
+  div.textContent = str || '';
   return div.innerHTML;
 }
+
+window.addEventListener('beforeunload', stopTimer);

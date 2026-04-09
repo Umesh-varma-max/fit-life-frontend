@@ -330,13 +330,21 @@ async function saveProfile() {
     cacheProfile({
       ...body,
       bmi: data.bmi,
-      daily_calories: data.daily_calories
+      body_fat_percentage: data.body_fat_percentage,
+      body_fat_category: data.body_fat_category,
+      daily_calories: data.daily_calories,
+      goal_label: data.goal_label,
+      activity_label: data.activity_label
     });
     hasSavedProfile = true;
     renderProfileSummary({
       ...body,
       bmi: data.bmi,
-      daily_calories: data.daily_calories
+      body_fat_percentage: data.body_fat_percentage,
+      body_fat_category: data.body_fat_category,
+      daily_calories: data.daily_calories,
+      goal_label: data.goal_label,
+      activity_label: data.activity_label
     });
     showToast(`Profile saved! BMI: ${data.bmi} · Daily Calories: ${data.daily_calories} kcal`, 'success', 4000);
     setTimeout(() => {

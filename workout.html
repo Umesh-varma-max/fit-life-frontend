@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="FitLife Workout - Goal-based weekly workouts with posture cues and calorie burn estimates.">
+  <meta name="description" content="FitLife Workout - Profile-driven workout plans with guided sessions, timers, and goal tracking.">
   <title>Workout - FitLife</title>
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/components.css">
@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/animations.css">
   <link rel="stylesheet" href="css/dark-mode.css">
 </head>
-<body>
+<body class="has-sticky-workout-controls">
   <div id="sidebar-overlay" class="sidebar-overlay"></div>
   <aside id="sidebar" class="sidebar">
     <a href="dashboard.html" class="sidebar-logo">
@@ -50,7 +50,7 @@
     <header class="topbar">
       <div class="topbar-left">
         <button id="hamburger" class="hamburger" aria-label="Toggle menu">Menu</button>
-        <h2 class="topbar-title">Goal-Based Workout Plan</h2>
+        <h2 class="topbar-title">Workout</h2>
       </div>
       <div class="topbar-right">
         <button id="theme-toggle" class="btn-icon" data-tooltip="Dark Mode" aria-label="Toggle theme">Theme</button>
@@ -58,77 +58,149 @@
     </header>
 
     <main class="page-content">
-      <div class="card card-glass mb-3 animate-fade-in-up">
-        <div class="card-body workout-summary-grid">
-          <div>
-            <div class="text-muted" style="font-size: 0.8rem;">Goal</div>
-            <div id="workout-goal" style="font-size: 1.25rem; font-weight: 700; color: var(--text);">--</div>
-          </div>
-          <div>
-            <div class="text-muted" style="font-size: 0.8rem;">Weekly Duration</div>
-            <div id="weekly-duration" style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">0 min</div>
-          </div>
-          <div>
-            <div class="text-muted" style="font-size: 0.8rem;">Weekly Burn</div>
-            <div id="weekly-burn" style="font-size: 1.25rem; font-weight: 700; color: var(--text);">0 kcal</div>
-          </div>
-          <div>
-            <div class="text-muted" style="font-size: 0.8rem;">Active Days</div>
-            <div id="weekly-days" style="font-size: 1.25rem; font-weight: 700; color: var(--text);">0 / 7</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card card-glass mb-3 animate-fade-in-up" id="session-card">
-        <div class="card-body workout-session-body">
-          <div>
-            <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent);" id="session-progress">0 / 0</div>
-            <div class="text-muted" style="font-size: 0.85rem;">Exercises completed today</div>
-          </div>
-          <div class="workout-session-progress">
-            <div class="progress-wrap" style="height: 12px;">
-              <div class="progress-bar" id="session-bar" style="width: 0%;"></div>
+      <section class="card card-glass workout-goal-hero animate-fade-in-up">
+        <div class="card-body workout-goal-hero-body">
+          <div class="workout-goal-copy">
+            <span id="goal-badge" class="badge badge-accent">Goal Plan</span>
+            <h1 id="goal-label" class="workout-goal-title">Loading your workout goal...</h1>
+            <p id="goal-summary" class="workout-goal-copytext">Building a plan from your latest profile, BMI, body-fat category, and activity level.</p>
+            <div class="workout-goal-meta">
+              <span id="goal-eta" class="tag tag-accent">Goal ETA --</span>
+              <span id="goal-bmi-category" class="tag">BMI --</span>
+              <span id="goal-bfp-category" class="tag">BFP --</span>
             </div>
           </div>
-          <button id="finish-workout-btn" class="btn btn-primary btn-sm" style="display: none;">Finish Workout</button>
-        </div>
-      </div>
-
-      <div class="card mb-3 animate-fade-in-up delay-1" id="timer-card" style="display: none;">
-        <div class="card-body workout-timer-body">
-          <div class="text-muted mb-1" style="font-size: 0.85rem;" id="timer-exercise-name">Exercise</div>
-          <div style="font-size: 3.5rem; font-weight: 700; font-family: var(--font-mono); color: var(--accent); margin-bottom: 16px;" id="timer-display">00:00</div>
-          <div class="timer-controls">
-            <button id="timer-start" class="btn btn-primary btn-sm">Start</button>
-            <button id="timer-pause" class="btn btn-ghost btn-sm" style="display: none;">Pause</button>
-            <button id="timer-reset" class="btn btn-ghost btn-sm">Reset</button>
-            <button id="timer-done" class="btn btn-success btn-sm">Done</button>
+          <div class="workout-goal-visual">
+            <img id="goal-hero-image" class="workout-goal-image hidden" alt="Workout goal hero">
+            <div id="goal-hero-fallback" class="workout-goal-image-fallback">
+              <div class="workout-goal-fallback-badge">FIT LIFE</div>
+              <div class="workout-goal-fallback-text">Adaptive plan</div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div id="exercises-container">
-        <div class="empty-state" style="padding: 60px 24px;">
-          <div class="empty-state-icon">Plan</div>
-          <div class="empty-state-title">Loading today's workout...</div>
-          <p class="empty-state-text">Fetching posture cues, duration, and calorie-burn estimates.</p>
+      <section class="card mt-3 animate-fade-in-up delay-1">
+        <div class="card-header">
+          <span class="card-title">Workout Activity</span>
+          <span id="today-plan-badge" class="badge badge-info">Today</span>
         </div>
-      </div>
+        <div id="today-plan-head" class="card-body workout-day-header">
+          <div>
+            <div id="today-plan-title" class="workout-day-summary-title">Loading today's plan...</div>
+            <div id="today-plan-meta" class="text-muted workout-day-summary-meta">Fetching your latest exercise plan.</div>
+          </div>
+        </div>
+        <div id="exercises-container" class="card-body workout-activity-list">
+          <div class="empty-state">
+            <div class="empty-state-icon">Plan</div>
+            <div class="empty-state-title">Loading today's workout...</div>
+            <p class="empty-state-text">Fetching exercise media, duration, and calorie estimates.</p>
+          </div>
+        </div>
+      </section>
 
-      <div class="card mt-3 animate-fade-in-up delay-1">
+      <section class="card mt-3 animate-fade-in-up delay-1">
+        <div class="card-header">
+          <span class="card-title">Workout Stats</span>
+          <span class="badge badge-accent">Today</span>
+        </div>
+        <div class="card-body workout-stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Exercises</div>
+            <div id="stats-exercises" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Minutes</div>
+            <div id="stats-minutes" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Calories</div>
+            <div id="stats-calories" class="stat-value">0</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="timer-section" class="card mt-3 animate-fade-in-up delay-2 hidden">
+        <div class="card-header">
+          <span class="card-title">Active Timer</span>
+          <span id="session-status-badge" class="badge badge-accent">Exercise Time</span>
+        </div>
+        <div class="card-body workout-active-layout">
+          <div class="workout-active-primary">
+            <div id="active-exercise-name" class="workout-active-title">Ready to start</div>
+            <div id="active-exercise-meta" class="text-muted workout-active-meta">Duration, sets, reps, and calories will show here.</div>
+            <div class="workout-timer-display">
+              <div id="timer-phase-label" class="workout-timer-phase">Exercise Time</div>
+              <div id="timer-display" class="workout-timer-clock">00:00</div>
+            </div>
+            <div class="workout-session-stats">
+              <span id="completed-count" class="tag tag-accent">0 completed</span>
+              <span id="duration-so-far" class="tag">0 sec</span>
+              <span id="calories-so-far" class="tag">0 kcal</span>
+            </div>
+          </div>
+          <div class="workout-active-secondary">
+            <div id="active-media-block" class="workout-media workout-media-large">
+              <div class="workout-media-fallback">
+                <div class="workout-media-fallback-icon">FIT</div>
+                <p>Exercise media will appear here.</p>
+              </div>
+            </div>
+            <div class="workout-next-card">
+              <div class="workout-next-label">Next Exercise</div>
+              <div id="next-exercise-name" class="workout-next-name">--</div>
+              <div id="next-exercise-meta" class="text-muted workout-next-meta">--</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="completion-summary" class="card mt-3 animate-fade-in-up delay-2 hidden">
+        <div class="card-header">
+          <span class="card-title">Workout Complete</span>
+          <span class="badge badge-success">Done</span>
+        </div>
+        <div class="card-body workout-complete-grid">
+          <div class="stat-card">
+            <div class="stat-label">Goal</div>
+            <div id="complete-goal" class="stat-value">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Exercises</div>
+            <div id="complete-exercises" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Minutes</div>
+            <div id="complete-minutes" class="stat-value">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Calories</div>
+            <div id="complete-calories" class="stat-value">0</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card mt-3 animate-fade-in-up delay-2">
         <div class="card-header">
           <span class="card-title">Weekly Goal Plan</span>
-          <span class="badge badge-accent" id="weekly-plan-source">Plan</span>
+          <span class="badge badge-accent">Weekly</span>
         </div>
-        <div class="card-body" id="weekly-plan-container">
-          <div class="empty-state" style="padding: 32px 24px;">
+        <div id="weekly-plan-container" class="card-body workout-week-list">
+          <div class="empty-state">
             <div class="empty-state-icon">Week</div>
             <div class="empty-state-title">Preparing weekly workout view...</div>
-            <p class="empty-state-text">Each day will include estimated duration, calories burned, and posture guidance.</p>
+            <p class="empty-state-text">Each day will include focused exercises, duration, and calories.</p>
           </div>
         </div>
-      </div>
+      </section>
     </main>
+
+    <div class="workout-sticky-controls">
+      <button id="start-session-btn" class="btn btn-primary">Start Workout</button>
+      <button id="complete-current-btn" class="btn btn-success hidden">Complete Exercise</button>
+      <button id="reset-session-btn" class="btn btn-outline hidden">Reset Workout</button>
+    </div>
   </div>
 
   <script src="js/config.js"></script>

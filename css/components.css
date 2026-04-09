@@ -2129,3 +2129,420 @@
     grid-template-columns: repeat(4, minmax(0, auto));
   }
 }
+
+.workout-goal-hero-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.workout-goal-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.workout-goal-title {
+  margin: 0;
+  font-size: clamp(2rem, 7vw, 3.6rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.workout-goal-copytext {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.workout-goal-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workout-goal-visual {
+  position: relative;
+  min-height: 240px;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0, 212, 170, 0.12), rgba(0, 180, 216, 0.05));
+}
+
+.workout-goal-image,
+.workout-goal-image-fallback {
+  width: 100%;
+  height: 100%;
+}
+
+.workout-goal-image {
+  object-fit: cover;
+}
+
+.workout-goal-image-fallback {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(5, 10, 18, 0.18), rgba(5, 10, 18, 0.72)),
+    radial-gradient(circle at top right, rgba(0, 212, 170, 0.2), transparent 35%),
+    radial-gradient(circle at bottom left, rgba(0, 180, 216, 0.24), transparent 28%),
+    linear-gradient(135deg, #0a121c, #11283b);
+}
+
+.workout-goal-fallback-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.workout-goal-fallback-text {
+  color: #fff;
+  font-size: clamp(1.2rem, 6vw, 2rem);
+  font-weight: 800;
+}
+
+.workout-day-header {
+  padding-bottom: 0 !important;
+}
+
+.workout-activity-list {
+  display: grid;
+  gap: 14px;
+}
+
+.exercise-card {
+  overflow: hidden;
+}
+
+.exercise-card.completed {
+  opacity: 0.7;
+}
+
+.exercise-card.exercise-card-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.exercise-card-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.exercise-visual,
+.workout-media {
+  min-height: 210px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0, 212, 170, 0.12), rgba(0, 180, 216, 0.04));
+  overflow: hidden;
+}
+
+.exercise-media {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: rgba(6, 12, 18, 0.3);
+}
+
+.exercise-copy {
+  min-width: 0;
+}
+
+.exercise-name {
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.exercise-meta {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.exercise-posture-box {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.exercise-posture-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.exercise-posture-title,
+.weekly-plan-posture {
+  margin-top: 8px;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.exercise-posture-cues,
+.weekly-plan-cues {
+  margin-top: 8px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.exercise-media-fallback {
+  height: 100%;
+  min-height: 210px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 22px;
+  text-align: center;
+  gap: 10px;
+}
+
+.exercise-media-fallback-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--accent);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.exercise-media-fallback-title {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.exercise-media-fallback-copy,
+.exercise-media-fallback-meta {
+  color: var(--text-muted);
+  line-height: 1.55;
+  font-size: 0.88rem;
+}
+
+.workout-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workout-active-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.workout-active-primary,
+.workout-active-secondary {
+  display: grid;
+  gap: 14px;
+}
+
+.workout-active-title {
+  font-size: clamp(1.35rem, 5vw, 2rem);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.workout-active-meta,
+.workout-next-meta {
+  line-height: 1.6;
+}
+
+.workout-timer-display {
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(0, 212, 170, 0.12), rgba(0, 180, 216, 0.05));
+  border: 1px solid rgba(0, 212, 170, 0.14);
+  text-align: center;
+}
+
+.workout-timer-phase {
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.workout-timer-clock {
+  margin-top: 10px;
+  font-size: clamp(2.8rem, 14vw, 5rem);
+  line-height: 1;
+  font-weight: 800;
+  color: var(--accent);
+  font-family: var(--font-mono, var(--font-main));
+}
+
+.workout-session-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.workout-next-card {
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.workout-next-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.workout-next-name {
+  margin-top: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.workout-media-large {
+  min-height: 260px;
+}
+
+.workout-complete-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.workout-week-list {
+  display: grid;
+  gap: 16px;
+}
+
+.workout-week-card {
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.workout-week-card-today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.workout-week-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.workout-week-summary {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.weekly-plan-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.weekly-plan-item {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.weekly-plan-visual {
+  min-height: 140px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(0, 212, 170, 0.12), rgba(0, 180, 216, 0.05));
+}
+
+.weekly-plan-exercise-title {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.weekly-plan-exercise-meta {
+  margin-top: 4px;
+}
+
+.workout-sticky-controls {
+  position: sticky;
+  bottom: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  background: rgba(7, 12, 20, 0.92);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+}
+
+.has-sticky-workout-controls .page-content {
+  padding-bottom: 180px;
+}
+
+@media (min-width: 640px) {
+  .workout-goal-hero-body,
+  .weekly-plan-item {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+  }
+
+  .workout-sticky-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .workout-active-layout {
+    grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  }
+
+  .exercise-card-body {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+
+  .workout-goal-hero-body {
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .workout-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workout-complete-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
