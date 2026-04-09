@@ -19,6 +19,7 @@ async function loadRecommendations() {
   try {
     const data = await recommendAPI.get();
     const recommendations = normalizeRecommendations(data);
+    hideFallbackBanner();
 
     renderBMIBanner(recommendations);
     renderDietPlan(recommendations.diet_plan);
@@ -33,9 +34,10 @@ async function loadRecommendations() {
     renderWorkoutPlan(fallback.workout_plan);
     renderWeeklyTips(fallback.weekly_tips);
     renderGeneratedAt(new Date().toISOString());
+    showFallbackBanner('Live recommendations are temporarily unavailable. Showing your personalized fallback plan.');
 
-    showToast('Live recommendations failed, showing personalized fallback', 'warning');
-    console.error(error);
+    showToast('Showing personalized fallback recommendations', 'warning');
+    console.error('Recommendations request failed:', error.payload || error);
   }
 }
 
@@ -47,6 +49,7 @@ function normalizeRecommendations(data) {
     daily_calories: raw.daily_calories || raw.calories || 0,
     diet_plan: normalizeDietPlan(raw.diet_plan || raw.meals || {}),
     workout_plan: normalizeWorkoutPlan(raw.workout_plan || raw.weekly_workout || {}),
+    workout_plan_details: raw.workout_plan_details || raw.workout_plan_detail || {},
     weekly_tips: Array.isArray(raw.weekly_tips) ? raw.weekly_tips : (raw.weekly_tips ? [raw.weekly_tips] : []),
     generated_at: raw.generated_at || new Date().toISOString()
   };
@@ -152,6 +155,18 @@ function renderWorkoutPlan(plan) {
       }).join('')}
     </div>
   `;
+}
+
+function showFallbackBanner(message) {
+  const banner = document.getElementById('recommendation-fallback-banner');
+  const text = document.getElementById('recommendation-fallback-text');
+  if (!banner || !text) return;
+  text.textContent = message;
+  banner.classList.remove('hidden');
+}
+
+function hideFallbackBanner() {
+  document.getElementById('recommendation-fallback-banner')?.classList.add('hidden');
 }
 
 function renderRecommendationExercise(exercise) {

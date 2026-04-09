@@ -81,8 +81,12 @@ async function apiFetch(endpoint, options = {}) {
       ...options,
       headers: { ...headers, ...(options.headers || {}) }
     });
-  } catch {
-    throw new Error('Network error - check your connection');
+  } catch (networkError) {
+    console.error('[API][NETWORK]', endpoint, networkError);
+    const error = new Error('Network error - check your connection');
+    error.status = 0;
+    error.payload = null;
+    throw error;
   }
 
   if (response.status === 401) {
@@ -93,8 +97,11 @@ async function apiFetch(endpoint, options = {}) {
 
   const data = await parseApiResponse(response);
 
+  console.info('[API]', endpoint, { status: response.status, body: data });
+
   if (!response.ok) {
-    const error = new Error(data.message || data.error || 'Request failed');
+    console.error('[API][ERROR]', endpoint, { status: response.status, body: data });
+    const error = new Error(resolveApiErrorMessage(response.status, data));
     error.status = response.status;
     error.errors = data.errors || null;
     error.payload = data;
@@ -116,8 +123,12 @@ async function apiFetchForm(endpoint, formData, options = {}) {
         ...(options.headers || {})
       }
     });
-  } catch {
-    throw new Error('Network error - check your connection');
+  } catch (networkError) {
+    console.error('[API][NETWORK]', endpoint, networkError);
+    const error = new Error('Network error - check your connection');
+    error.status = 0;
+    error.payload = null;
+    throw error;
   }
 
   if (response.status === 401) {
@@ -128,8 +139,11 @@ async function apiFetchForm(endpoint, formData, options = {}) {
 
   const data = await parseApiResponse(response);
 
+  console.info('[API]', endpoint, { status: response.status, body: data });
+
   if (!response.ok) {
-    const error = new Error(data.message || data.error || 'Request failed');
+    console.error('[API][ERROR]', endpoint, { status: response.status, body: data });
+    const error = new Error(resolveApiErrorMessage(response.status, data));
     error.status = response.status;
     error.errors = data.errors || null;
     error.payload = data;
@@ -137,6 +151,15 @@ async function apiFetchForm(endpoint, formData, options = {}) {
   }
 
   return data;
+}
+
+function resolveApiErrorMessage(status, data) {
+  const baseMessage = data?.message || data?.error || '';
+  if (baseMessage) return baseMessage;
+  if (status === 401) return 'Unauthorized - please sign in again';
+  if (status === 404) return 'Requested resource was not found';
+  if (status >= 500) return 'Server error - please try again shortly';
+  return 'Request failed';
 }
 
 const authAPI = {
