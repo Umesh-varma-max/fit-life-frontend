@@ -121,6 +121,15 @@ function mountMobileBottomNav() {
 }
 
 async function loadDashboard() {
+  const cached = readTimedCache(CONFIG.DASHBOARD_CACHE_KEY);
+  if (cached?.data) {
+    const dashboard = cached.data?.dashboard || cached.data || {};
+    renderStats(dashboard);
+    renderCalorieRing(dashboard);
+    renderWeeklyChart(dashboard.weekly_chart || {});
+    renderQuote(dashboard);
+  }
+
   try {
     const data = await dashboardAPI.get();
     const dashboard = data?.dashboard || data || {};
@@ -138,11 +147,13 @@ async function loadDashboard() {
     }
 
     console.error('Dashboard request failed:', error.payload || error);
-    renderStats({});
-    renderCalorieRing({});
-    renderWeeklyChart({});
-    renderQuote({});
-    showToast('Failed to load dashboard data', 'error');
+    if (!cached?.data) {
+      renderStats({});
+      renderCalorieRing({});
+      renderWeeklyChart({});
+      renderQuote({});
+      showToast('Failed to load dashboard data', 'error');
+    }
   }
 }
 

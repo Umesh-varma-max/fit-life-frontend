@@ -28,6 +28,22 @@ function getCachedWorkoutPlan() {
   }
 }
 
+function getCachedDashboard() {
+  try {
+    return JSON.parse(localStorage.getItem(CONFIG.DASHBOARD_CACHE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function getCachedRecommendations() {
+  try {
+    return JSON.parse(localStorage.getItem(CONFIG.RECOMMENDATIONS_CACHE_KEY));
+  } catch {
+    return null;
+  }
+}
+
 function cacheProfile(profile) {
   if (!profile) return;
   localStorage.setItem(CONFIG.PROFILE_CACHE_KEY, JSON.stringify(profile));
@@ -36,6 +52,29 @@ function cacheProfile(profile) {
 function cacheWorkoutPlan(plan) {
   if (!plan) return;
   localStorage.setItem(CONFIG.WORKOUT_PLAN_CACHE_KEY, JSON.stringify(plan));
+}
+
+function setTimedCache(key, data) {
+  if (!data) return;
+  localStorage.setItem(key, JSON.stringify({
+    saved_at: Date.now(),
+    data
+  }));
+}
+
+function readTimedCache(key) {
+  try {
+    const cached = JSON.parse(localStorage.getItem(key));
+    if (!cached || typeof cached !== 'object') return null;
+    return cached;
+  } catch {
+    return null;
+  }
+}
+
+function isTimedCacheFresh(cached) {
+  if (!cached?.saved_at) return false;
+  return Date.now() - cached.saved_at <= CONFIG.API_CACHE_TTL_MS;
 }
 
 function clearStoredSession() {
@@ -197,11 +236,19 @@ const profileAPI = {
 };
 
 const dashboardAPI = {
-  get: () => apiFetch('/dashboard')
+  get: async () => {
+    const data = await apiFetch('/dashboard');
+    setTimedCache(CONFIG.DASHBOARD_CACHE_KEY, data);
+    return data;
+  }
 };
 
 const recommendAPI = {
-  get: () => apiFetch('/recommendations')
+  get: async () => {
+    const data = await apiFetch('/recommendations');
+    setTimedCache(CONFIG.RECOMMENDATIONS_CACHE_KEY, data);
+    return data;
+  }
 };
 
 const activityAPI = {

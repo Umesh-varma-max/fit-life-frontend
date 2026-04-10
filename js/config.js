@@ -17,6 +17,9 @@ const CONFIG = {
   PROFILE_CACHE_KEY: 'fitlife_profile_cache',
   AI_CHAT_HISTORY_KEY: 'fitlife_ai_chat_history',
   WORKOUT_PLAN_CACHE_KEY: 'fitlife_workout_plan_cache',
+  DASHBOARD_CACHE_KEY: 'fitlife_dashboard_cache',
+  RECOMMENDATIONS_CACHE_KEY: 'fitlife_recommendations_cache',
+  API_CACHE_TTL_MS: 5 * 60 * 1000,
 
   // ─── Goals ───
   WATER_GOAL_ML:  3000,

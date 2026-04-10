@@ -31,6 +31,17 @@ async function loadWorkoutPlan(showLoading = true) {
     renderLoadingState();
   }
 
+  const cachedWorkout = getCachedWorkoutPlan();
+  if (cachedWorkout) {
+    workoutResponse = cachedWorkout || {};
+    weeklyPlan = Array.isArray(workoutResponse.plan) ? workoutResponse.plan : [];
+    todayPlan = workoutResponse.today_plan || deriveTodayPlan(weeklyPlan);
+    renderGoalHero(workoutResponse);
+    renderWorkoutStats(buildWorkoutStats(workoutResponse, todayPlan, weeklyPlan));
+    renderTodayPlan(todayPlan);
+    renderWeeklyPlan(weeklyPlan);
+  }
+
   try {
     const response = await workoutAPI.getPlan();
     workoutResponse = response || {};

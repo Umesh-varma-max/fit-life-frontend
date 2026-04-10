@@ -16,6 +16,16 @@ function initRefresh() {
 }
 
 async function loadRecommendations() {
+  const cached = readTimedCache(CONFIG.RECOMMENDATIONS_CACHE_KEY);
+  if (cached?.data) {
+    const recommendations = normalizeRecommendations(cached.data);
+    renderBMIBanner(recommendations);
+    renderDietPlan(recommendations.diet_plan);
+    renderWorkoutPlan(recommendations.workout_plan);
+    renderWeeklyTips(recommendations.weekly_tips);
+    renderGeneratedAt(recommendations.generated_at);
+  }
+
   try {
     const data = await recommendAPI.get();
     const recommendations = normalizeRecommendations(data);
@@ -27,6 +37,12 @@ async function loadRecommendations() {
     renderWeeklyTips(recommendations.weekly_tips);
     renderGeneratedAt(recommendations.generated_at);
   } catch (error) {
+    if (cached?.data) {
+      showFallbackBanner('Showing recently loaded recommendations while the live service catches up.');
+      console.error('Recommendations request failed, using cached data:', error.payload || error);
+      return;
+    }
+
     const fallback = buildRecommendationFallback(getCachedProfile());
 
     renderBMIBanner(fallback);
