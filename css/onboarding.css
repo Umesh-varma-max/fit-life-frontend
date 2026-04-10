@@ -5,9 +5,10 @@
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 78% 18%, rgba(255, 180, 120, 0.18), transparent 20rem),
-    linear-gradient(180deg, rgba(7, 9, 14, 0.08), rgba(7, 9, 14, 0.88)),
-    linear-gradient(135deg, #0d0d10 10%, #191516 42%, #050608 100%);
+    linear-gradient(180deg, rgba(2, 12, 24, 0.24), rgba(3, 10, 18, 0.9)),
+    radial-gradient(circle at 18% 78%, rgba(24, 199, 199, 0.16), transparent 26rem),
+    radial-gradient(circle at 82% 14%, rgba(102, 213, 103, 0.14), transparent 20rem),
+    linear-gradient(135deg, #051019 4%, #0b2234 48%, #041019 100%);
   color: #fff;
 }
 
@@ -16,27 +17,26 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 85% 30%, rgba(187, 122, 78, 0.3), transparent 18rem),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.2) 48%, rgba(0, 0, 0, 0.85) 100%);
+    linear-gradient(90deg, rgba(1, 8, 14, 0.82) 0%, rgba(1, 8, 14, 0.28) 46%, rgba(1, 8, 14, 0.74) 100%),
+    radial-gradient(circle at 70% 22%, rgba(126, 236, 255, 0.28), transparent 12rem),
+    radial-gradient(circle at 58% 42%, rgba(126, 236, 255, 0.12), transparent 18rem);
   pointer-events: none;
 }
 
 .welcome-shell::after {
   content: '';
   position: absolute;
-  right: -6vw;
-  top: 10vh;
-  width: clamp(220px, 48vw, 420px);
-  height: 76vh;
-  border-radius: 12rem 12rem 3rem 3rem;
+  inset: 0;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0)),
-    linear-gradient(180deg, rgba(28, 25, 26, 0.9), rgba(10, 11, 14, 0.98));
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.04),
-    -2rem 0 5rem rgba(0,0,0,0.4);
-  opacity: 0.9;
-  transform: rotate(4deg);
+    linear-gradient(transparent 0 76%, rgba(0, 0, 0, 0.18) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 11%,
+      rgba(122, 233, 255, 0.08) 11.5% 12.1%,
+      transparent 12.6% 27%
+    ),
+    radial-gradient(circle at 76% 18%, rgba(122, 233, 255, 0.18), transparent 18rem);
+  opacity: 0.72;
   pointer-events: none;
 }
 
@@ -54,20 +54,26 @@
   width: min(100%, 22rem);
 }
 
+.welcome-brand {
+  margin-bottom: 1rem;
+}
+
+.welcome-brand-logo {
+  width: clamp(180px, 58vw, 260px);
+  max-width: 100%;
+  border-radius: 22px;
+  box-shadow: 0 18px 40px rgba(2, 12, 24, 0.28);
+}
+
 @media (max-width: 767px) {
   .welcome-shell::after {
-    right: -22vw;
-    top: 13vh;
-    width: min(54vw, 250px);
-    height: 54vh;
-    border-radius: 8rem 8rem 2rem 2rem;
-    opacity: 0.55;
+    opacity: 0.54;
   }
 
   .welcome-shell::before {
     background:
-      radial-gradient(circle at 80% 26%, rgba(187, 122, 78, 0.22), transparent 14rem),
-      linear-gradient(90deg, rgba(0, 0, 0, 0.74) 0%, rgba(0, 0, 0, 0.18) 46%, rgba(0, 0, 0, 0.72) 100%);
+      linear-gradient(90deg, rgba(1, 8, 14, 0.82) 0%, rgba(1, 8, 14, 0.32) 44%, rgba(1, 8, 14, 0.78) 100%),
+      radial-gradient(circle at 76% 18%, rgba(126, 236, 255, 0.22), transparent 11rem);
   }
 
   .welcome-hero {
@@ -80,6 +86,10 @@
     width: min(100%, 18rem);
     margin-top: auto;
     padding-bottom: 0.35rem;
+  }
+
+  .welcome-brand-logo {
+    width: min(62vw, 220px);
   }
 
   .welcome-kicker {
@@ -125,6 +135,7 @@
   line-height: 0.96;
   letter-spacing: -0.04em;
   color: #fff;
+  text-transform: uppercase;
 }
 
 .welcome-subtitle {
@@ -139,8 +150,8 @@
   min-height: 56px;
   width: 100%;
   border-radius: 999px;
-  background: #fff;
-  color: #111217;
+  background: linear-gradient(135deg, #ffffff, #ecffff);
+  color: var(--brand-ink);
   font-size: 1rem;
   font-weight: 700;
   box-shadow: 0 22px 48px rgba(0,0,0,0.34);
@@ -160,6 +171,22 @@
   color: #fff;
   font-weight: 700;
   backdrop-filter: blur(10px);
+}
+
+.auth-sheet-logo .auth-logo-icon {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.96), rgba(240,252,252,0.92)),
+    url('../assets/fit-life-ai-logo.jpeg') center/cover no-repeat;
+  font-size: 0;
+  color: transparent;
+  border: 1px solid rgba(24, 199, 199, 0.18);
+}
+
+.auth-sheet-logo .auth-logo-text {
+  background: linear-gradient(135deg, var(--brand-blue), var(--brand-cyan) 58%, var(--brand-green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .auth-entry-sheet {
