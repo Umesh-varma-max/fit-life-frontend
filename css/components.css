@@ -805,6 +805,61 @@
   margin-top: 6px;
 }
 
+.chat-provider {
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--text-light);
+  letter-spacing: 0.04em;
+}
+
+.chat-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.chat-suggestion-chip {
+  min-height: 36px;
+  width: auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.chat-suggestion-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent-dark);
+  background: var(--accent-subtle);
+}
+
+.chat-suggestions-breakfast .chat-suggestion-chip,
+.chat-suggestions-lunch .chat-suggestion-chip,
+.chat-suggestions-dinner .chat-suggestion-chip,
+.chat-suggestions-snack .chat-suggestion-chip {
+  background: rgba(102, 213, 103, 0.12);
+}
+
+.chat-suggestions-workout .chat-suggestion-chip {
+  background: rgba(15, 93, 168, 0.14);
+}
+
+.chat-suggestions-progress .chat-suggestion-chip,
+.chat-suggestions-body_metrics .chat-suggestion-chip {
+  background: rgba(24, 199, 199, 0.14);
+}
+
+.chat-suggestions-hydration .chat-suggestion-chip,
+.chat-suggestions-recovery .chat-suggestion-chip {
+  background: rgba(255, 217, 61, 0.14);
+}
+
 .chat-input-area {
   flex-shrink: 0;
   padding-top: 8px;

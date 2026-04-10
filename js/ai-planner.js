@@ -55,7 +55,11 @@ async function sendMessage(voiceText = null) {
     showTyping(false);
 
     const reply = extractAiReply(data) || buildPlannerFallback(message, profileContext);
-    addChatBubble('ai', reply);
+    addChatBubble('ai', reply, {
+      provider: data?.provider || '',
+      topic: data?.topic || 'general',
+      suggestions: Array.isArray(data?.suggestions) ? data.suggestions : []
+    });
     chatHistory.push({ role: 'ai', content: reply });
     persistChatHistory();
 
@@ -65,7 +69,11 @@ async function sendMessage(voiceText = null) {
   } catch (error) {
     showTyping(false);
     const fallbackReply = buildPlannerFallback(message, profileContext);
-    addChatBubble('ai', fallbackReply);
+    addChatBubble('ai', fallbackReply, {
+      provider: 'rule_fallback',
+      topic: inferFallbackTopic(message),
+      suggestions: buildFallbackSuggestions(message, profileContext)
+    });
     chatHistory.push({ role: 'ai', content: fallbackReply });
     persistChatHistory();
     showToast('AI service had an issue, showing a personalized fallback plan', 'warning');
@@ -82,7 +90,7 @@ function shouldSpeakReply(data) {
   return Boolean(data?.speak ?? true);
 }
 
-function addChatBubble(type, text) {
+function addChatBubble(type, text, meta = {}) {
   const container = document.getElementById('chat-container');
   if (!container) return;
 
@@ -103,16 +111,21 @@ function addChatBubble(type, text) {
       <div class="chat-avatar-user">${getUserInitial()}</div>
     `;
   } else {
+    const providerText = meta.provider ? `<div class="chat-provider">${escapeHtml(formatProviderLabel(meta.provider))}</div>` : '';
+    const suggestionMarkup = renderSuggestionChips(meta.suggestions, meta.topic);
     bubble.innerHTML = `
       <div class="chat-avatar">AI</div>
       <div class="chat-content">
         <div class="chat-text">${formatAIResponse(text)}</div>
+        ${providerText}
+        ${suggestionMarkup}
         <div class="chat-time">${time}</div>
       </div>
     `;
   }
 
   container.appendChild(bubble);
+  wireSuggestionChips(bubble);
   container.scrollTop = container.scrollHeight;
 }
 
@@ -255,6 +268,78 @@ function restoreChatHistory() {
 
 function persistChatHistory() {
   localStorage.setItem(CONFIG.AI_CHAT_HISTORY_KEY, JSON.stringify(chatHistory.slice(-12)));
+}
+
+function renderSuggestionChips(suggestions, topic) {
+  const validSuggestions = (Array.isArray(suggestions) ? suggestions : [])
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .slice(0, 4);
+
+  if (!validSuggestions.length) return '';
+
+  const topicClass = `chat-suggestions-${escapeHtml((topic || 'general').toLowerCase())}`;
+  return `
+    <div class="chat-suggestions ${topicClass}">
+      ${validSuggestions.map((item) => `
+        <button type="button" class="chat-suggestion-chip" data-chat-suggestion="${escapeHtml(item)}">${escapeHtml(item)}</button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function wireSuggestionChips(scope) {
+  scope.querySelectorAll('[data-chat-suggestion]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const prompt = button.getAttribute('data-chat-suggestion');
+      if (!prompt) return;
+
+      const input = document.getElementById('chat-input');
+      if (input) {
+        input.value = prompt;
+        input.focus();
+      }
+      sendMessage(prompt);
+    });
+  });
+}
+
+function formatProviderLabel(provider) {
+  return provider.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function inferFallbackTopic(message) {
+  const query = (message || '').toLowerCase();
+  if (query.includes('breakfast')) return 'breakfast';
+  if (query.includes('lunch')) return 'lunch';
+  if (query.includes('dinner')) return 'dinner';
+  if (query.includes('snack')) return 'snack';
+  if (query.includes('workout')) return 'workout';
+  if (query.includes('progress')) return 'progress';
+  if (query.includes('water') || query.includes('hydrate')) return 'hydration';
+  if (query.includes('recovery') || query.includes('sleep')) return 'recovery';
+  if (query.includes('bmi') || query.includes('weight') || query.includes('body')) return 'body_metrics';
+  return 'general';
+}
+
+function buildFallbackSuggestions(message, profile) {
+  const topic = inferFallbackTopic(message);
+  const goal = formatEnumLabel(profile?.fitness_goal || 'maintenance');
+
+  const suggestionsByTopic = {
+    breakfast: ['High protein breakfast ideas', 'Quick breakfast under 400 kcal', 'Vegetarian breakfast options'],
+    lunch: ['Healthy lunch for my goal', 'Lunch with more protein', 'Simple office lunch plan'],
+    dinner: ['Light dinner ideas', 'Dinner for better recovery', 'Low calorie dinner plan'],
+    snack: ['Healthy snack options', 'Snacks for cravings', 'High protein snack ideas'],
+    workout: ['Pre-workout meal ideas', 'Post-workout nutrition', `Meals for ${goal}`],
+    progress: ['How to stay consistent', 'Weekly diet checklist', 'What to improve this week'],
+    hydration: ['Daily hydration tips', 'Foods with more water', 'Water goal plan'],
+    recovery: ['Sleep and recovery foods', 'Late-night meal advice', 'Recovery meal ideas'],
+    body_metrics: ['Explain my BMI simply', `Nutrition for ${goal}`, 'How many calories should I eat?'],
+    general: ['Create a 1-day meal plan', 'What should I eat today?', `Best diet tips for ${goal}`]
+  };
+
+  return suggestionsByTopic[topic] || suggestionsByTopic.general;
 }
 
 function updateWelcomeMessage() {
