@@ -22,6 +22,7 @@ function bindWorkoutControls() {
   document.getElementById('pause-session-btn')?.addEventListener('click', togglePauseSession);
   document.getElementById('complete-current-btn')?.addEventListener('click', completeCurrentExercise);
   document.getElementById('reset-session-btn')?.addEventListener('click', resetWorkoutSession);
+  document.getElementById('exercises-container')?.addEventListener('click', handleExerciseCardAction);
 }
 
 async function loadWorkoutPlan(showLoading = true) {
@@ -232,10 +233,39 @@ function renderExerciseCard(exercise, index) {
             <div class="exercise-posture-title">${escapeHtml(exercise.description || 'Controlled movement with strong posture.')}</div>
             <div class="exercise-posture-cues">${escapeHtml(buildInstructionSummary(exercise))}</div>
           </div>
+          <div class="exercise-inline-controls">
+            <div class="exercise-inline-timer">
+              <span class="exercise-inline-timer-label">Timer</span>
+              <strong id="exercise-timer-${index}" class="exercise-inline-timer-value">${formatTimer(getExerciseSeconds(exercise))}</strong>
+            </div>
+            <div class="exercise-inline-actions">
+              <button type="button" class="btn btn-sm btn-ghost js-start-exercise" data-exercise-index="${index}">Start Timer</button>
+              <button type="button" class="btn btn-sm btn-success js-complete-exercise" data-exercise-index="${index}">Complete</button>
+            </div>
+          </div>
         </div>
       </div>
     </article>
   `;
+}
+
+function handleExerciseCardAction(event) {
+  const startButton = event.target.closest('.js-start-exercise');
+  if (startButton) {
+    const index = Number(startButton.dataset.exerciseIndex);
+    if (!Number.isNaN(index)) {
+      startExerciseFromCard(index);
+    }
+    return;
+  }
+
+  const completeButton = event.target.closest('.js-complete-exercise');
+  if (completeButton) {
+    const index = Number(completeButton.dataset.exerciseIndex);
+    if (!Number.isNaN(index)) {
+      completeExerciseFromCard(index);
+    }
+  }
 }
 
 function renderExerciseMedia(exercise) {
@@ -391,6 +421,52 @@ async function handleStartSession() {
   }
 
   startTimerLoop();
+}
+
+async function startExerciseFromCard(index) {
+  if (!todayPlan?.exercises?.[index]) {
+    return;
+  }
+
+  if (index < completedExercises.length) {
+    showToast('This exercise is already completed.', 'info');
+    return;
+  }
+
+  if (index > completedExercises.length) {
+    showToast('Complete the earlier exercise first to keep the session in order.', 'warning');
+    return;
+  }
+
+  currentExerciseIndex = index;
+  timerMode = 'exercise';
+  timerRemaining = getExerciseSeconds(getCurrentExercise());
+  updateTimerPanel();
+  highlightExerciseCards();
+  updateSessionControls();
+  await handleStartSession();
+}
+
+async function completeExerciseFromCard(index) {
+  if (index !== currentExerciseIndex) {
+    if (index < completedExercises.length) {
+      showToast('This exercise is already completed.', 'info');
+      return;
+    }
+    if (index > completedExercises.length) {
+      showToast('Complete the earlier exercise first to keep the session in order.', 'warning');
+      return;
+    }
+
+    currentExerciseIndex = index;
+    timerMode = 'exercise';
+    timerRemaining = getExerciseSeconds(getCurrentExercise());
+    updateTimerPanel();
+    highlightExerciseCards();
+    updateSessionControls();
+  }
+
+  await completeCurrentExercise();
 }
 
 function startTimerLoop() {
@@ -580,6 +656,7 @@ function updateTimerPanel() {
       name: sessionCompleted ? 'Workout Complete' : 'Ready Session',
       description: sessionCompleted ? 'Recovery, hydration, and mobility time.' : 'Your active exercise media will appear here once the session starts.'
     });
+    refreshInlineExercisePanels();
     return;
   }
 
@@ -589,6 +666,7 @@ function updateTimerPanel() {
   setText('next-exercise-name', nextExercise?.name || 'Finish line');
   setText('next-exercise-meta', nextExercise ? buildCompactExerciseMeta(nextExercise) : 'Complete this exercise to finish the workout');
   document.getElementById('active-media-block').innerHTML = renderExerciseMedia(exercise);
+  refreshInlineExercisePanels();
 }
 
 function updateSessionControls() {
@@ -622,6 +700,8 @@ function updateSessionControls() {
     resetBtn.classList.toggle('hidden', !sessionId && !completedExercises.length && !timerRunning);
     resetBtn.disabled = !sessionId && !completedExercises.length && !timerRunning;
   }
+
+  refreshInlineExercisePanels();
 }
 
 function getCurrentExercise() {
@@ -638,6 +718,34 @@ function highlightExerciseCards() {
   document.querySelectorAll('[id^="exercise-card-"]').forEach((card, index) => {
     card.classList.toggle('completed', index < completedExercises.length);
     card.classList.toggle('exercise-card-active', index === currentExerciseIndex && !!getCurrentExercise());
+  });
+}
+
+function refreshInlineExercisePanels() {
+  if (!todayPlan?.exercises?.length) return;
+
+  todayPlan.exercises.forEach((exercise, index) => {
+    const timerNode = document.getElementById(`exercise-timer-${index}`);
+    const startButton = document.querySelector(`.js-start-exercise[data-exercise-index="${index}"]`);
+    const completeButton = document.querySelector(`.js-complete-exercise[data-exercise-index="${index}"]`);
+    const isCompleted = index < completedExercises.length;
+    const isActive = index === currentExerciseIndex && !!getCurrentExercise();
+    const isLocked = index > completedExercises.length;
+
+    if (timerNode) {
+      const seconds = isActive ? (timerRemaining || getExerciseSeconds(exercise)) : getExerciseSeconds(exercise);
+      timerNode.textContent = formatTimer(seconds);
+    }
+
+    if (startButton) {
+      startButton.disabled = isCompleted || isLocked;
+      startButton.textContent = isCompleted ? 'Done' : (isActive && timerRunning ? 'Running' : (isActive ? 'Resume' : 'Start Timer'));
+    }
+
+    if (completeButton) {
+      completeButton.disabled = isCompleted || isLocked;
+      completeButton.textContent = isCompleted ? 'Completed' : 'Complete';
+    }
   });
 }
 

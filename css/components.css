@@ -2262,6 +2262,43 @@
   min-width: 0;
 }
 
+.exercise-inline-controls {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.exercise-inline-timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.exercise-inline-timer-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.exercise-inline-timer-value {
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.exercise-inline-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .exercise-name {
   font-size: 1.08rem;
   font-weight: 700;
@@ -2466,6 +2503,7 @@
   display: grid;
   gap: 12px;
   margin-top: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .weekly-plan-item {
@@ -2479,7 +2517,7 @@
 }
 
 .weekly-plan-visual {
-  min-height: 140px;
+  min-height: 120px;
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -2513,13 +2551,17 @@
 }
 
 @media (min-width: 640px) {
-  .workout-goal-hero-body,
-  .weekly-plan-item {
+  .workout-goal-hero-body {
     grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
   }
 
   .workout-sticky-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exercise-inline-controls {
+    grid-template-columns: auto 1fr;
+    align-items: center;
   }
 }
 
