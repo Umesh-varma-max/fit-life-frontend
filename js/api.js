@@ -87,6 +87,52 @@ function clearStoredSession() {
   ].forEach((key) => localStorage.removeItem(key));
 }
 
+const authorizedImageCache = new Map();
+
+function getApiOrigin() {
+  try {
+    return new URL(CONFIG.API_BASE).origin;
+  } catch {
+    return window.location.origin;
+  }
+}
+
+function resolveApiAssetUrl(url) {
+  if (!url) return '';
+  if (/^(https?:|data:|blob:)/i.test(url)) return url;
+
+  try {
+    return new URL(url, getApiOrigin()).toString();
+  } catch {
+    return url;
+  }
+}
+
+async function fetchAuthorizedImageObjectUrl(url) {
+  const resolvedUrl = resolveApiAssetUrl(url);
+  if (!resolvedUrl) return '';
+  if (authorizedImageCache.has(resolvedUrl)) {
+    return authorizedImageCache.get(resolvedUrl);
+  }
+
+  const response = await fetch(resolvedUrl, {
+    headers: {
+      ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {})
+    }
+  });
+
+  if (!response.ok) {
+    const error = new Error(`Failed to load image (${response.status})`);
+    error.status = response.status;
+    throw error;
+  }
+
+  const imageBlob = await response.blob();
+  const objectUrl = URL.createObjectURL(imageBlob);
+  authorizedImageCache.set(resolvedUrl, objectUrl);
+  return objectUrl;
+}
+
 async function parseApiResponse(response) {
   if (response.status === 204) {
     return {};

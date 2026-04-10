@@ -71,7 +71,7 @@
             <div class="scanner-action-row">
               <button id="open-camera-btn" class="btn btn-primary scanner-cta">Scan with Camera</button>
               <button id="upload-photo-btn" class="btn btn-ghost scanner-cta">Upload Image</button>
-              <input id="food-file-input" type="file" accept="image/*" capture="environment" class="hidden">
+              <input id="food-file-input" type="file" accept="image/*" class="hidden">
             </div>
 
             <div class="scanner-meta-grid">
@@ -229,7 +229,11 @@
         <section class="card">
           <div class="card-header">
             <span class="card-title">Recent Scans</span>
-            <span id="history-count" class="badge badge-info">0</span>
+            <div class="scanner-history-toolbar">
+              <button id="keep-last-five-btn" class="btn btn-ghost btn-sm" type="button">Keep Last 5</button>
+              <button id="clear-scan-history-btn" class="btn btn-ghost btn-sm" type="button">Clear All</button>
+              <span id="history-count" class="badge badge-info">0</span>
+            </div>
           </div>
           <div id="scan-history-list" class="card-body"></div>
         </section>

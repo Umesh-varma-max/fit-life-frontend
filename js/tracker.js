@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
   initWaterControls();
   initSleepControls();
   loadDayLogs(currentDate);
+
+  window.addEventListener('fitlife:meal-logged', () => {
+    loadDayLogs(currentDate);
+  });
 });
 
 // ─── Date Picker ─────────────────────────────────
@@ -134,13 +138,19 @@ function renderDayLogs(logs) {
   } else {
     mealsList.innerHTML = mealLogs.map(log => `
       <div class="log-item animate-fade-in-up">
-        <div class="log-item-icon">🍽️</div>
+        <div class="log-item-icon log-item-media">
+          ${log.has_image
+            ? `<img class="log-item-image" data-auth-image="${escapeHtml(log.thumbnail_url || log.image_url || '')}" alt="${escapeHtml(log.description || 'Meal')}">`
+            : '🍽️'}
+        </div>
         <div class="log-item-info">
           <div class="log-item-title">${escapeHtml(log.description || 'Meal')}</div>
           <div class="log-item-meta">${log.calories_in || 0} kcal</div>
         </div>
       </div>
     `).join('');
+
+    hydrateTrackerImages(mealsList);
   }
 
   // Workouts
@@ -166,6 +176,32 @@ function renderDayLogs(logs) {
       </div>
     `).join('');
   }
+}
+
+async function hydrateTrackerImages(container) {
+  const images = Array.from(container.querySelectorAll('[data-auth-image]'));
+
+  await Promise.all(images.map(async (img) => {
+    const url = img.getAttribute('data-auth-image');
+    if (!url) {
+      applyTrackerImageFallback(img);
+      return;
+    }
+
+    try {
+      img.src = await fetchAuthorizedImageObjectUrl(url);
+      img.addEventListener('error', () => applyTrackerImageFallback(img), { once: true });
+    } catch (error) {
+      console.warn('Tracker meal image failed to load', { url, error });
+      applyTrackerImageFallback(img);
+    }
+  }));
+}
+
+function applyTrackerImageFallback(img) {
+  const wrapper = img.closest('.log-item-icon');
+  if (!wrapper) return;
+  wrapper.innerHTML = '🍽️';
 }
 
 // ─── Meal Form ───────────────────────────────────

@@ -614,6 +614,18 @@
   border-radius: var(--radius-sm);
 }
 
+.log-item-media {
+  overflow: hidden;
+  padding: 0;
+}
+
+.log-item-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .log-item-info {
   flex: 1;
 }
@@ -1425,6 +1437,18 @@
   border-bottom: 1px solid var(--border);
 }
 
+.scanner-history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scanner-history-toolbar .btn {
+  width: auto;
+}
+
 .scanner-history-item:last-child {
   border-bottom: none;
 }
@@ -1444,6 +1468,19 @@
   object-fit: cover;
 }
 
+.scanner-history-thumb-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .scanner-history-copy {
   flex: 1;
   min-width: 0;
@@ -1458,6 +1495,17 @@
 .scanner-history-copy span {
   font-size: 0.86rem;
   color: var(--text-muted);
+}
+
+.scanner-history-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.scanner-history-delete {
+  min-width: 82px;
 }
 
 @keyframes scannerSweep {
@@ -1541,6 +1589,16 @@
   .scanner-history-item {
     align-items: flex-start;
     flex-wrap: wrap;
+  }
+
+  .scanner-history-toolbar {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .scanner-history-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .scanner-error-card {
@@ -2533,30 +2591,9 @@
   margin-top: 4px;
 }
 
-.workout-sticky-controls {
-  position: sticky;
-  bottom: 0;
-  z-index: 40;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
-  background: rgba(7, 12, 20, 0.92);
-  backdrop-filter: blur(14px);
-  border-top: 1px solid var(--border);
-}
-
-.has-sticky-workout-controls .page-content {
-  padding-bottom: 180px;
-}
-
 @media (min-width: 640px) {
   .workout-goal-hero-body {
     grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
-  }
-
-  .workout-sticky-controls {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .exercise-inline-controls {
@@ -2576,10 +2613,6 @@
 
   .workout-goal-hero-body {
     grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  }
-
-  .workout-sticky-controls {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

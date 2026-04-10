@@ -19,10 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function bindWorkoutControls() {
-  document.getElementById('start-session-btn')?.addEventListener('click', handleStartSession);
-  document.getElementById('pause-session-btn')?.addEventListener('click', togglePauseSession);
-  document.getElementById('complete-current-btn')?.addEventListener('click', completeCurrentExercise);
-  document.getElementById('reset-session-btn')?.addEventListener('click', resetWorkoutSession);
   document.getElementById('exercises-container')?.addEventListener('click', handleExerciseCardAction);
 }
 
@@ -456,6 +452,12 @@ async function startExerciseFromCard(index) {
   updateTimerPanel();
   highlightExerciseCards();
   updateSessionControls();
+
+  if (sessionId && index === completedExercises.length && timerRunning) {
+    togglePauseSession();
+    return;
+  }
+
   await handleStartSession();
 }
 
@@ -689,35 +691,12 @@ function updateSessionControls() {
   const hasWorkout = !!todayPlan?.exercises?.length;
   const hasExercise = !!getCurrentExercise();
 
-  const startBtn = document.getElementById('start-session-btn');
-  const pauseBtn = document.getElementById('pause-session-btn');
-  const completeBtn = document.getElementById('complete-current-btn');
-  const resetBtn = document.getElementById('reset-session-btn');
-
-  if (startBtn) {
-    startBtn.disabled = !hasWorkout || sessionCompleted;
-    startBtn.textContent = sessionId
-      ? (timerRunning ? 'Running' : 'Resume')
-      : 'Start Workout';
-  }
-
-  if (pauseBtn) {
-    pauseBtn.classList.toggle('hidden', !sessionId || !hasExercise);
-    pauseBtn.disabled = !sessionId || !hasExercise;
-    pauseBtn.textContent = timerRunning ? 'Pause' : 'Resume Timer';
-  }
-
-  if (completeBtn) {
-    completeBtn.classList.toggle('hidden', !sessionId || !hasExercise);
-    completeBtn.disabled = !sessionId || !hasExercise;
-  }
-
-  if (resetBtn) {
-    resetBtn.classList.toggle('hidden', !sessionId && !completedExercises.length && !timerRunning);
-    resetBtn.disabled = !sessionId && !completedExercises.length && !timerRunning;
-  }
-
   refreshInlineExercisePanels();
+
+  const timerSection = document.getElementById('timer-section');
+  if (timerSection) {
+    timerSection.classList.toggle('hidden', !hasWorkout || !hasExercise || sessionCompleted);
+  }
 }
 
 function getCurrentExercise() {
@@ -747,15 +726,24 @@ function refreshInlineExercisePanels() {
     const isCompleted = index < completedExercises.length;
     const isActive = index === currentExerciseIndex && !!getCurrentExercise();
     const isLocked = index > completedExercises.length;
+    const timerLabel = startButton?.closest('.exercise-inline-controls')?.querySelector('.exercise-inline-timer-label');
 
     if (timerNode) {
       const seconds = isActive ? (timerRemaining || getExerciseSeconds(exercise)) : getExerciseSeconds(exercise);
       timerNode.textContent = formatTimer(seconds);
     }
 
+    if (timerLabel) {
+      timerLabel.textContent = isCompleted ? 'Done' : (isActive && timerMode === 'rest' ? 'Rest' : 'Timer');
+    }
+
     if (startButton) {
       startButton.disabled = isCompleted || isLocked;
-      startButton.textContent = isCompleted ? 'Done' : (isActive && timerRunning ? 'Running' : (isActive ? 'Resume' : 'Start Timer'));
+      startButton.textContent = isCompleted
+        ? 'Done'
+        : (isActive && timerRunning
+          ? 'Pause'
+          : (isActive && sessionId ? 'Resume' : 'Start'));
     }
 
     if (completeButton) {

@@ -1,5 +1,7 @@
 const SCAN_HISTORY_KEY = 'fitlife_scan_history';
+const HIDDEN_SCAN_IDS_KEY = 'fitlife_hidden_scan_ids';
 const MAX_HISTORY_ITEMS = 12;
+const HISTORY_RETAIN_COUNT = 5;
 
 const SCANNER_STATES = {
   IDLE: 'idle',
@@ -16,6 +18,7 @@ let currentPreviewUrl = '';
 let latestAnalysis = null;
 let latestRawAnalysis = null;
 let scannerState = SCANNER_STATES.IDLE;
+let backendScanHistory = [];
 
 const NUTRITION_LIBRARY = [
   { keywords: ['biryani'], food_name: 'Chicken Biryani', serving_estimate: '1 plate', estimated_calories: 620, protein_g: 26, carbs_g: 68, fat_g: 24 },
@@ -36,10 +39,11 @@ const NUTRITION_LIBRARY = [
   { keywords: ['cake', 'layerz'], food_name: 'Layer Cake', serving_estimate: '1 piece', estimated_calories: 280, protein_g: 3.8, carbs_g: 34, fat_g: 14 }
 ];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   wireScannerActions();
-  renderScanHistory();
   applyScannerState(SCANNER_STATES.IDLE);
+  await refreshScanHistoryFromBackend();
+  renderScanHistory();
 });
 
 function wireScannerActions() {
@@ -53,6 +57,9 @@ function wireScannerActions() {
   const resetScannerBtn = document.getElementById('reset-scanner-btn');
   const logMealBtn = document.getElementById('log-meal-btn');
   const retryHintBtn = document.getElementById('retry-with-hint-btn');
+  const keepLastFiveBtn = document.getElementById('keep-last-five-btn');
+  const clearHistoryBtn = document.getElementById('clear-scan-history-btn');
+  const historyList = document.getElementById('scan-history-list');
 
   openCameraBtn?.addEventListener('click', startCamera);
   uploadPhotoBtn?.addEventListener('click', () => fileInput?.click());
@@ -64,6 +71,13 @@ function wireScannerActions() {
   resetScannerBtn?.addEventListener('click', resetScanner);
   logMealBtn?.addEventListener('click', addCurrentAnalysisToMealLog);
   retryHintBtn?.addEventListener('click', focusHintAndReturnToPreview);
+  keepLastFiveBtn?.addEventListener('click', keepLastFiveScans);
+  clearHistoryBtn?.addEventListener('click', clearAllScans);
+  historyList?.addEventListener('click', handleHistoryActions);
+  window.addEventListener('fitlife:meal-logged', async () => {
+    await refreshScanHistoryFromBackend();
+    renderScanHistory();
+  });
 }
 
 async function startCamera() {
@@ -89,6 +103,7 @@ async function startCamera() {
     }
 
     applyScannerState(SCANNER_STATES.CAMERA);
+    scrollScannerIntoView();
   } catch (error) {
     console.error('Camera start failed', error);
     renderScanError({
@@ -146,6 +161,7 @@ function previewFile(file) {
   stopCamera();
   setPreviewImage(file);
   applyScannerState(SCANNER_STATES.PREVIEW);
+  scrollScannerIntoView();
 }
 
 function setPreviewImage(file) {
@@ -180,7 +196,7 @@ async function analyzeCurrentPhoto() {
     latestRawAnalysis = response;
     latestAnalysis = analysis;
     renderAnalysis(analysis);
-    persistScanHistory(analysis, currentPreviewUrl || document.getElementById('preview-image')?.src || '');
+    await persistScanHistory(analysis);
     renderScanHistory();
     applyScannerState(SCANNER_STATES.RESULT);
     showToast('Meal analyzed successfully', 'success');
@@ -301,6 +317,9 @@ async function addCurrentAnalysisToMealLog() {
     applyScannerState(SCANNER_STATES.RESULT);
 
     if (response?.meal_log) {
+      removeMatchingLocalScan(analysis);
+      await refreshScanHistoryFromBackend();
+      renderScanHistory();
       window.dispatchEvent(new CustomEvent('fitlife:meal-logged', { detail: response.meal_log }));
     }
 
@@ -537,6 +556,122 @@ function getScanHistory() {
   }
 }
 
+function saveScanHistory(history) {
+  localStorage.setItem(SCAN_HISTORY_KEY, JSON.stringify(history));
+}
+
+async function getPersistentPreviewData() {
+  if (currentFile) {
+    try {
+      return await fileToDataUrl(currentFile);
+    } catch (error) {
+      console.warn('Failed to store scan preview as data URL', error);
+    }
+  }
+
+  return document.getElementById('preview-image')?.src || '';
+}
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(reader.error || new Error('Could not read image file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function handleHistoryActions(event) {
+  const deleteButton = event.target.closest('[data-delete-scan]');
+  if (!deleteButton) return;
+
+  const scanId = deleteButton.getAttribute('data-delete-scan');
+  if (!scanId) return;
+
+  const nextHistory = getScanHistory().filter((item) => item.id !== scanId);
+  saveScanHistory(nextHistory);
+  renderScanHistory();
+  showToast('Scan deleted', 'success');
+}
+
+function keepLastFiveScans() {
+  const history = getScanHistory();
+  if (history.length <= HISTORY_RETAIN_COUNT) {
+    showToast('Only the newest scans are already kept', 'info');
+    return;
+  }
+
+  saveScanHistory(history.slice(0, HISTORY_RETAIN_COUNT));
+  renderScanHistory();
+  showToast('Older scans cleared. Latest 5 kept.', 'success');
+}
+
+function clearAllScans() {
+  if (!getScanHistory().length) {
+    showToast('No scans to clear', 'info');
+    return;
+  }
+
+  saveScanHistory([]);
+  renderScanHistory();
+  showToast('All scans cleared', 'success');
+}
+
+async function persistScanHistory(analysis) {
+  const preview = await getPersistentPreviewData();
+  const history = getScanHistory();
+  history.unshift({
+    id: `scan-${Date.now()}`,
+    ...analysis,
+    preview,
+    scanned_at: new Date().toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  });
+  saveScanHistory(history.slice(0, MAX_HISTORY_ITEMS));
+}
+
+function renderScanHistory() {
+  const container = document.getElementById('scan-history-list');
+  const count = document.getElementById('history-count');
+  const history = getScanHistory();
+
+  if (count) count.textContent = String(history.length);
+  if (!container) return;
+
+  if (!history.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">Scan</div>
+        <div class="empty-state-title">No scans yet</div>
+        <p class="empty-state-text">Your recent AI food scans will show up here.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = history.map((item) => `
+    <article class="scanner-history-item" data-scan-id="${escapeHtml(item.id || '')}">
+      <div class="scanner-history-thumb">
+        ${item.preview
+          ? `<img src="${item.preview}" alt="${escapeHtml(item.food_name)}">`
+          : '<div class="scanner-history-thumb-fallback">Scan</div>'}
+      </div>
+      <div class="scanner-history-copy">
+        <strong>${escapeHtml(item.food_name)}</strong>
+        <p>${Math.round(item.estimated_calories || 0)} kcal · ${escapeHtml(item.serving_estimate || '1 serving')}</p>
+        <span>${escapeHtml(item.scanned_at)}</span>
+      </div>
+      <div class="scanner-history-actions">
+        <button class="btn btn-ghost btn-sm scanner-history-delete" type="button" data-delete-scan="${escapeHtml(item.id || '')}">Delete</button>
+      </div>
+    </article>
+  `).join('');
+}
+
 function focusHintAndReturnToPreview() {
   if (currentFile) {
     applyScannerState(SCANNER_STATES.PREVIEW);
@@ -548,6 +683,13 @@ function focusHintField() {
   const hintField = document.getElementById('manual-food-hint');
   hintField?.focus();
   hintField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function scrollScannerIntoView() {
+  document.getElementById('scanner-stage')?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  });
 }
 
 function applyScannerState(state) {
@@ -658,6 +800,254 @@ function buildGoalAwareFeedback(analysis, goal) {
   return analysis.estimated_calories <= 350
     ? 'This looks like a lighter balanced meal. Keep variety and hydration consistent through the day.'
     : 'This meal is workable for maintenance when balanced with activity and lighter meals later in the day.';
+}
+
+function getMergedScanHistory() {
+  const hiddenIds = getHiddenScanIds();
+  const localHistory = getScanHistory()
+    .map((item) => ({
+      ...item,
+      source_type: item.source_type || 'local',
+      sort_value: item.sort_value || Date.now()
+    }))
+    .filter((item) => !hiddenIds.includes(item.id));
+
+  const remoteHistory = backendScanHistory
+    .filter((item) => !hiddenIds.includes(item.id));
+
+  return [...remoteHistory, ...localHistory]
+    .sort((a, b) => (b.sort_value || 0) - (a.sort_value || 0))
+    .slice(0, MAX_HISTORY_ITEMS);
+}
+
+function getHiddenScanIds() {
+  try {
+    return JSON.parse(localStorage.getItem(HIDDEN_SCAN_IDS_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveHiddenScanIds(ids) {
+  localStorage.setItem(HIDDEN_SCAN_IDS_KEY, JSON.stringify(ids));
+}
+
+function removeMatchingLocalScan(analysis) {
+  const history = getScanHistory();
+  const matchIndex = history.findIndex((item) =>
+    item.source_type !== 'backend'
+    && item.food_name === analysis.food_name
+    && Math.round(item.estimated_calories || 0) === Math.round(analysis.estimated_calories || 0)
+  );
+
+  if (matchIndex === -1) return;
+  history.splice(matchIndex, 1);
+  saveScanHistory(history);
+}
+
+async function refreshScanHistoryFromBackend() {
+  const dates = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - index);
+    return date.toISOString().split('T')[0];
+  });
+
+  const recentLogs = await Promise.all(dates.map(async (date) => {
+    try {
+      const data = await activityAPI.getDay(date);
+      return Array.isArray(data?.logs) ? data.logs : [];
+    } catch (error) {
+      if (error.status !== 404) {
+        console.warn('Failed to load backend scan history', { date, error });
+      }
+      return [];
+    }
+  }));
+
+  backendScanHistory = recentLogs
+    .flat()
+    .filter((log) => log.log_type === 'meal')
+    .map(normalizeBackendScanLog)
+    .filter(Boolean)
+    .sort((a, b) => (b.sort_value || 0) - (a.sort_value || 0));
+}
+
+function normalizeBackendScanLog(log) {
+  const mediaUrl = log.thumbnail_url || log.image_url || '';
+
+  return {
+    id: `remote-${log.id}`,
+    backend_id: log.id,
+    source_type: 'backend',
+    food_name: log.description || 'Logged Meal',
+    serving_estimate: log.serving_estimate || '1 serving',
+    estimated_calories: Number(log.calories_in || 0),
+    preview: '',
+    image_url: log.has_image ? mediaUrl : '',
+    has_image: Boolean(log.has_image),
+    scanned_at: formatBackendScanTime(log),
+    sort_value: getBackendLogSortValue(log)
+  };
+}
+
+function getBackendLogSortValue(log) {
+  const candidate = log.logged_at || log.created_at || log.updated_at || log.log_date || '';
+  const parsed = Date.parse(candidate);
+  return Number.isNaN(parsed) ? Date.now() : parsed;
+}
+
+function formatBackendScanTime(log) {
+  const parsed = getBackendLogSortValue(log);
+  return new Date(parsed).toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+async function hydrateScanHistoryImages(container) {
+  const images = Array.from(container.querySelectorAll('[data-scan-image]'));
+
+  await Promise.all(images.map(async (img) => {
+    const source = img.getAttribute('data-scan-image');
+    if (!source) {
+      applyScanImageFallback(img);
+      return;
+    }
+
+    if (/^(data:|blob:)/i.test(source)) {
+      img.addEventListener('error', () => applyScanImageFallback(img), { once: true });
+      return;
+    }
+
+    try {
+      img.src = await fetchAuthorizedImageObjectUrl(source);
+      img.addEventListener('error', () => applyScanImageFallback(img), { once: true });
+    } catch (error) {
+      console.warn('Scan history image failed to load', { source, error });
+      applyScanImageFallback(img);
+    }
+  }));
+}
+
+function applyScanImageFallback(img) {
+  const wrapper = img.closest('.scanner-history-thumb');
+  if (!wrapper) return;
+  wrapper.innerHTML = '<div class="scanner-history-thumb-fallback">Scan</div>';
+}
+
+function handleHistoryActions(event) {
+  const deleteButton = event.target.closest('[data-delete-scan]');
+  if (!deleteButton) return;
+
+  const scanId = deleteButton.getAttribute('data-delete-scan');
+  if (!scanId) return;
+
+  if (scanId.startsWith('remote-')) {
+    const hiddenIds = getHiddenScanIds();
+    if (!hiddenIds.includes(scanId)) {
+      hiddenIds.push(scanId);
+      saveHiddenScanIds(hiddenIds);
+    }
+  } else {
+    const nextHistory = getScanHistory().filter((item) => item.id !== scanId);
+    saveScanHistory(nextHistory);
+  }
+
+  renderScanHistory();
+  showToast('Scan deleted', 'success');
+}
+
+function keepLastFiveScans() {
+  const merged = getMergedScanHistory();
+  if (merged.length <= HISTORY_RETAIN_COUNT) {
+    showToast('Only the newest scans are already kept', 'info');
+    return;
+  }
+
+  const keepIds = new Set(merged.slice(0, HISTORY_RETAIN_COUNT).map((item) => item.id));
+  const localHistory = getScanHistory().filter((item) => keepIds.has(item.id));
+  const remoteHiddenIds = backendScanHistory
+    .filter((item) => !keepIds.has(item.id))
+    .map((item) => item.id);
+
+  saveScanHistory(localHistory);
+  saveHiddenScanIds(remoteHiddenIds);
+  renderScanHistory();
+  showToast('Older scans cleared. Latest 5 kept.', 'success');
+}
+
+function clearAllScans() {
+  const merged = getMergedScanHistory();
+  if (!merged.length) {
+    showToast('No scans to clear', 'info');
+    return;
+  }
+
+  saveScanHistory([]);
+  saveHiddenScanIds(backendScanHistory.map((item) => item.id));
+  renderScanHistory();
+  showToast('All scans cleared', 'success');
+}
+
+function renderScanHistory() {
+  const container = document.getElementById('scan-history-list');
+  const count = document.getElementById('history-count');
+  const history = getMergedScanHistory();
+
+  if (count) count.textContent = String(history.length);
+  if (!container) return;
+
+  if (!history.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">Scan</div>
+        <div class="empty-state-title">No scans yet</div>
+        <p class="empty-state-text">Your recent AI food scans will show up here.</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = history.map((item) => `
+    <article class="scanner-history-item" data-scan-id="${escapeHtml(item.id || '')}">
+      <div class="scanner-history-thumb">
+        ${(item.preview || item.image_url)
+          ? `<img data-scan-image="${escapeHtml(item.preview || item.image_url)}" src="${item.preview || ''}" alt="${escapeHtml(item.food_name)}">`
+          : '<div class="scanner-history-thumb-fallback">Scan</div>'}
+      </div>
+      <div class="scanner-history-copy">
+        <strong>${escapeHtml(item.food_name)}</strong>
+        <p>${Math.round(item.estimated_calories || 0)} kcal · ${escapeHtml(item.serving_estimate || '1 serving')}</p>
+        <span>${escapeHtml(item.scanned_at)}</span>
+      </div>
+      <div class="scanner-history-actions">
+        <button class="btn btn-ghost btn-sm scanner-history-delete" type="button" data-delete-scan="${escapeHtml(item.id || '')}">Delete</button>
+      </div>
+    </article>
+  `).join('');
+
+  hydrateScanHistoryImages(container);
+}
+
+async function persistScanHistory(analysis) {
+  const preview = await getPersistentPreviewData();
+  const history = getScanHistory();
+  history.unshift({
+    id: `scan-${Date.now()}`,
+    source_type: 'local',
+    sort_value: Date.now(),
+    ...analysis,
+    preview,
+    scanned_at: new Date().toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  });
+  saveScanHistory(history.slice(0, MAX_HISTORY_ITEMS));
 }
 
 function needsReviewBadge(analysis) {

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fit-Life AI Project Overview</title>
+  <style>
+    :root {
+      --bg: #f4fbfb;
+      --surface: #ffffff;
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #d7e3ea;
+      --brand: #0a6db3;
+      --brand-2: #0bc5b7;
+      --brand-3: #35d06f;
+      --soft: #eef9f8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(11, 197, 183, 0.10), transparent 28%),
+        radial-gradient(circle at top left, rgba(10, 109, 179, 0.08), transparent 22%),
+        var(--bg);
+      line-height: 1.55;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 42px 34px 56px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #082743 0%, #0f4974 44%, #0bb0b2 100%);
+      color: #fff;
+      border-radius: 28px;
+      padding: 34px 34px 30px;
+      box-shadow: 0 24px 60px rgba(10, 41, 68, 0.18);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -40px -70px auto;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.24), transparent 68%);
+    }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 38px;
+      line-height: 1.04;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 700px;
+      font-size: 16px;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 26px;
+    }
+
+    .hero-stat {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 18px;
+      padding: 14px 16px;
+    }
+
+    .hero-stat strong {
+      display: block;
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+
+    .section {
+      margin-top: 26px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 26px 26px 20px;
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.05);
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 24px;
+      color: var(--brand);
+    }
+
+    h3 {
+      margin: 18px 0 10px;
+      font-size: 17px;
+      color: var(--ink);
+    }
+
+    p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .pill-list,
+    .point-list {
+      margin: 10px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .pill-list li,
+    .point-list li {
+      margin-bottom: 8px;
+    }
+
+    .callout {
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(10,109,179,0.08), rgba(11,197,183,0.10));
+      border: 1px solid rgba(11, 197, 183, 0.22);
+    }
+
+    .stack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--soft);
+      border: 1px solid rgba(11, 197, 183, 0.14);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .workflow {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .workflow-step {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fbffff;
+    }
+
+    .workflow-step .num {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 18px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    }
+
+    .footer {
+      margin-top: 24px;
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .page {
+        max-width: none;
+        padding: 18px;
+      }
+
+      .section,
+      .hero,
+      .workflow-step {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div class="eyebrow">Capstone Project Overview</div>
+      <h1>Fit-Life AI</h1>
+      <p>
+        Fit-Life AI is a health-and-fitness web platform designed to combine profile-driven wellness planning,
+        AI-assisted food scanning, adaptive workouts, tracking, and recommendations into one practical daily-use product.
+        The project aims to feel like a modern digital coach rather than a basic CRUD dashboard.
+      </p>
+
+      <div class="hero-grid">
+        <div class="hero-stat">
+          <strong>AI-first</strong>
+          <span>Food analysis, recommendations, and planning experience</span>
+        </div>
+        <div class="hero-stat">
+          <strong>Profile-driven</strong>
+          <span>Workouts and guidance adapt using BMI, goals, and health data</span>
+        </div>
+        <div class="hero-stat">
+          <strong>Mobile-ready</strong>
+          <span>Responsive product flow for daily use on phones and desktop</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Project Ideology</h2>
+      <div class="grid-2">
+        <div>
+          <p>
+            The core ideology of Fit-Life AI is to make health technology feel personalized, actionable, and motivating.
+            Instead of showing isolated metrics, the platform connects user profile data, workouts, food habits, and
+            recommendations into one guided experience.
+          </p>
+          <p>
+            The product is built around the idea that users should not need separate apps for calories, workouts,
+            reminders, progress, and AI help. The system should work as an integrated assistant that understands goals,
+            body condition, and daily behavior.
+          </p>
+        </div>
+        <div class="callout">
+          <h3>Core Product Principles</h3>
+          <ul class="point-list">
+            <li>Personalization over generic plans</li>
+            <li>Usability over complex clinical presentation</li>
+            <li>AI as guidance, not visual decoration</li>
+            <li>Mobile-first experience for real daily usage</li>
+            <li>Actionable tracking instead of passive dashboards</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Present Frontend Tech Stack</h2>
+      <div class="stack">
+        <span class="tag">HTML5</span>
+        <span class="tag">CSS3</span>
+        <span class="tag">Vanilla JavaScript</span>
+        <span class="tag">Responsive CSS Grid</span>
+        <span class="tag">Flexbox</span>
+        <span class="tag">Local Storage</span>
+        <span class="tag">REST API Integration</span>
+        <span class="tag">JWT-based Auth Flow</span>
+        <span class="tag">Render / Vercel Deployment</span>
+      </div>
+
+      <h3>Frontend Architecture Style</h3>
+      <p>
+        The frontend is implemented as a multi-page web application using plain HTML, CSS, and JavaScript without a build
+        system. Each major feature area is organized as a dedicated page and paired with a feature-specific script.
+        Shared behavior such as API access, auth handling, sidebar navigation, toasts, and theme logic is centralized in
+        reusable JavaScript modules.
+      </p>
+
+      <h3>Main Frontend Modules</h3>
+      <ul class="point-list">
+        <li><strong>Authentication:</strong> welcome, login, register, and guarded page flow</li>
+        <li><strong>Dashboard:</strong> BMI, calories, water, streak, quote, and weekly insights</li>
+        <li><strong>Health Profile:</strong> onboarding-style profile capture and revisit summary</li>
+        <li><strong>Food Scanner:</strong> AI-style camera/upload flow with nutrition and warnings</li>
+        <li><strong>Workout:</strong> goal-based workout display, media blocks, timer, and progress flow</li>
+        <li><strong>Tracker:</strong> meals, workouts, water, sleep, and activity summary</li>
+        <li><strong>Recommendations / AI Planner:</strong> personalized guidance and chat-like support</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>Workflow of the System</h2>
+      <div class="workflow">
+        <div class="workflow-step">
+          <div class="num">1</div>
+          <div>
+            <h3>User Onboarding and Auth</h3>
+            <p>
+              The user lands on the branded welcome screen, signs in, and is redirected into the protected app flow with
+              session-aware navigation and token validation.
+            </p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="num">2</div>
+          <div>
+            <h3>Health Profile Capture</h3>
+            <p>
+              The user enters personal health information such as age, gender, height, weight, activity level, and fitness
+              goal. This becomes the decision base for BMI, calorie, body-fat, and workout logic.
+            </p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="num">3</div>
+          <div>
+            <h3>Backend Analysis and Plan Generation</h3>
+            <p>
+              The backend uses stored profile signals to return personalized workouts, recommendations, dashboard summaries,
+              and AI-assisted scanner output. Frontend pages then render these responses with safe fallbacks.
+            </p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="num">4</div>
+          <div>
+            <h3>Daily Use Features</h3>
+            <p>
+              The user scans meals, reviews nutritional feedback, logs food intake, follows workouts, tracks progress, and
+              receives recommendations and reminders through one connected interface.
+            </p>
+          </div>
+        </div>
+        <div class="workflow-step">
+          <div class="num">5</div>
+          <div>
+            <h3>Continuous Adaptation</h3>
+            <p>
+              When profile details change, workout and recommendation screens refresh to reflect the new goal path,
+              making the product adaptive rather than static.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Major Frontend Highlights</h2>
+      <ul class="point-list">
+        <li>Branded Fit-Life AI landing experience with onboarding-style authentication flow</li>
+        <li>Mobile-responsive UI across dashboard, scanner, workout, tracker, and recommendations pages</li>
+        <li>Defensive API rendering so pages degrade gracefully when backend data is partial</li>
+        <li>AI-style food scanner with preview, analysis states, warning banners, and meal logging</li>
+        <li>Profile-driven workout page with hero section, activity cards, timers, and weekly plan layout</li>
+        <li>Local persistence for supportive UX flows such as scan history, chat context, and cached profile state</li>
+        <li>Clear separation between shared utilities and feature-specific page scripts</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>Why This Project Matters</h2>
+      <p>
+        Fit-Life AI demonstrates how a modern capstone project can connect health data, AI-assisted interaction,
+        personalization, and responsive frontend engineering into one cohesive product. It is not only a website; it is a
+        user journey centered on motivation, habit support, and informed daily wellness choices.
+      </p>
+      <p>
+        From a technical perspective, the project shows practical frontend architecture, API integration, state handling,
+        responsive design, and real-world product thinking. From a product perspective, it shows how AI can support health
+        workflows in a way that feels helpful and structured for end users.
+      </p>
+    </section>
+
+    <div class="footer">
+      Fit-Life AI • Project overview prepared for presentation and documentation use
+    </div>
+  </div>
+</body>
+</html>
