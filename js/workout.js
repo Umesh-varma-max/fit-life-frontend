@@ -11,6 +11,7 @@ let timerMode = 'exercise';
 let timerRunning = false;
 let sessionId = null;
 let sessionCompleted = false;
+const WORKOUT_LOGGED_SESSIONS_KEY = 'fitlife_logged_workout_sessions';
 
 document.addEventListener('DOMContentLoaded', () => {
   bindWorkoutControls();
@@ -576,6 +577,8 @@ async function completeCurrentExercise() {
 }
 
 async function completeWholeWorkout() {
+  const completedSessionId = sessionId;
+
   if (!sessionId) {
     renderCompletionSummary();
     return;
@@ -595,6 +598,8 @@ async function completeWholeWorkout() {
   renderCompletionSummary();
   updateSessionControls();
   showToast('Workout complete!', 'success');
+
+  await persistWorkoutLog(completedSessionId);
 
   try {
     await loadWorkoutPlan(false);
@@ -747,6 +752,66 @@ function refreshInlineExercisePanels() {
       completeButton.textContent = isCompleted ? 'Completed' : 'Complete';
     }
   });
+}
+
+async function persistWorkoutLog(completedSessionId) {
+  const logKey = completedSessionId || buildWorkoutLogFingerprint();
+  if (!logKey || isWorkoutLogPersisted(logKey)) {
+    return;
+  }
+
+  const durationMinutes = Math.max(1, Math.round(totalDurationSeconds / 60));
+  const description = buildWorkoutLogDescription();
+
+  try {
+    await activityAPI.log({
+      log_type: 'workout',
+      description,
+      duration_min: durationMinutes,
+      calories_out: Math.max(0, Math.round(totalCaloriesBurned)),
+      log_date: new Date().toISOString().slice(0, 10)
+    });
+    markWorkoutLogPersisted(logKey);
+  } catch (error) {
+    console.error('Failed to write workout log entry:', error.payload || error);
+    showToast('Workout finished, but tracker log did not save.', 'warning');
+  }
+}
+
+function buildWorkoutLogDescription() {
+  const goalLabel = workoutResponse.goal_label || formatEnumLabel(workoutResponse.goal || 'Workout');
+  const dayLabel = todayPlan?.day || getDayName();
+  const planLabel = todayPlan?.plan_name || 'Workout Session';
+  return `${goalLabel} - ${dayLabel} - ${planLabel}`;
+}
+
+function buildWorkoutLogFingerprint() {
+  return [
+    buildWorkoutLogDescription(),
+    Math.round(totalDurationSeconds),
+    Math.round(totalCaloriesBurned),
+    new Date().toISOString().slice(0, 10)
+  ].join('|');
+}
+
+function getPersistedWorkoutLogs() {
+  try {
+    return JSON.parse(localStorage.getItem(WORKOUT_LOGGED_SESSIONS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function isWorkoutLogPersisted(key) {
+  return getPersistedWorkoutLogs().includes(key);
+}
+
+function markWorkoutLogPersisted(key) {
+  const logs = getPersistedWorkoutLogs();
+  if (!logs.includes(key)) {
+    logs.push(key);
+    localStorage.setItem(WORKOUT_LOGGED_SESSIONS_KEY, JSON.stringify(logs.slice(-100)));
+  }
 }
 
 function getExerciseSeconds(exercise) {

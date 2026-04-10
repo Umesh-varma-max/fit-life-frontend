@@ -215,21 +215,43 @@
   gap: 12px;
 }
 
+.topbar-right .btn-icon,
 .scanner-shortcut-btn {
   width: 44px;
   height: 44px;
-  border-radius: 14px;
+  min-width: 44px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.topbar-right .btn-icon {
+  background: var(--bg-alt);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.topbar-right .btn-icon:hover {
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-color: rgba(0, 212, 170, 0.22);
+}
+
+.scanner-shortcut-btn {
   background: linear-gradient(135deg, var(--accent), #00b4d8);
   color: #fff;
   box-shadow: var(--shadow-accent);
 }
 
+.topbar-right .btn-icon svg,
 .scanner-shortcut-btn svg {
   width: 20px;
   height: 20px;
+  display: block;
+  margin: auto;
   stroke: currentColor;
   fill: none;
   stroke-width: 2;
