@@ -348,7 +348,6 @@ function renderAnalysis(analysis) {
   const confidence = document.getElementById('analysis-confidence');
   const macroGrid = document.getElementById('analysis-macro-grid');
   const feedback = document.getElementById('analysis-feedback');
-  const tags = document.getElementById('analysis-tags');
   const logMealBtn = document.getElementById('log-meal-btn');
 
   if (foodName) foodName.textContent = analysis.food_name || 'Detected Meal';
@@ -369,21 +368,6 @@ function renderAnalysis(analysis) {
       metricCardMarkup('Carbs', `${Number(analysis.carbs_g || 0).toFixed(1)} g`),
       metricCardMarkup('Fats', `${Number(analysis.fat_g || 0).toFixed(1)} g`)
     ].join('');
-  }
-
-  const providerNotes = (analysis.provider_notes || []).slice(0, 3);
-  const noteItems = (analysis.notes || []).slice(0, 4);
-  if (tags) {
-    const combinedNotes = [
-      ...(analysis.source ? [`Source: ${analysis.source}`] : []),
-      ...providerNotes,
-      ...(analysis.provider_error ? [`Provider: ${analysis.provider_error}`] : []),
-      ...noteItems
-    ].slice(0, 6);
-
-    tags.innerHTML = combinedNotes.length
-      ? combinedNotes.map((item) => `<span class="badge badge-info">${escapeHtml(item)}</span>`).join('')
-      : '<span class="text-muted">No additional scan notes.</span>';
   }
 
   renderScanRecovery(analysis.scan_recovery);
@@ -411,7 +395,7 @@ function renderScanRecovery(scanRecovery) {
   recoveryCard.classList.remove('hidden', 'scanner-warning-card-neutral', 'scanner-warning-card-alert', 'scanner-warning-card-success');
   recoveryCard.classList.add(needsReview ? 'scanner-warning-card-alert' : 'scanner-warning-card-neutral');
   recoveryLabel.textContent = needsReview ? 'Review Before Logging' : 'Scan Source';
-  recoveryBadge.textContent = needsReview ? 'Needs confirmation' : (scanRecovery.provider_source || 'scanner');
+  recoveryBadge.textContent = needsReview ? 'Needs confirmation' : 'Reviewed';
   recoveryBadge.className = `badge ${needsReview ? 'badge-warning' : 'badge-info'}`;
   recoveryTitle.textContent = needsReview ? 'This scan needs a quick confirmation' : 'Scan source details';
   recoveryMessage.textContent = needsReview
@@ -425,6 +409,13 @@ function renderScanRecovery(scanRecovery) {
     recoverySuggestions.innerHTML = '';
     recoverySuggestions.classList.add('hidden');
   }
+
+  if (!needsReview) {
+    recoveryMessage.textContent = 'The scan was reviewed and the nutrition estimate is ready to use.';
+  }
+
+  recoverySuggestions.innerHTML = '';
+  recoverySuggestions.classList.add('hidden');
 }
 
 function renderDietWarning(dietWarning) {
