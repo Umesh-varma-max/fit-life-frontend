@@ -4,6 +4,44 @@ function getToken() {
   return localStorage.getItem(CONFIG.TOKEN_KEY);
 }
 
+function decodeJwtPayload(token) {
+  if (!token || typeof token !== 'string') return null;
+
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+
+    const normalized = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return JSON.parse(atob(padded));
+  } catch {
+    return null;
+  }
+}
+
+function isTokenValid(token = getToken()) {
+  if (!token) return false;
+
+  const payload = decodeJwtPayload(token);
+  if (!payload) return false;
+  if (!payload.exp) return true;
+
+  return (payload.exp * 1000) > Date.now();
+}
+
+function hasStoredSession() {
+  const token = getToken();
+  const user = getUser();
+
+  if (!token || !user) return false;
+  if (!isTokenValid(token)) {
+    clearStoredSession();
+    return false;
+  }
+
+  return true;
+}
+
 function getUser() {
   try {
     return JSON.parse(localStorage.getItem(CONFIG.USER_KEY));
@@ -83,8 +121,19 @@ function clearStoredSession() {
     CONFIG.USER_KEY,
     CONFIG.PROFILE_CACHE_KEY,
     CONFIG.AI_CHAT_HISTORY_KEY,
-    CONFIG.WORKOUT_PLAN_CACHE_KEY
+    CONFIG.WORKOUT_PLAN_CACHE_KEY,
+    CONFIG.DASHBOARD_CACHE_KEY,
+    CONFIG.RECOMMENDATIONS_CACHE_KEY
   ].forEach((key) => localStorage.removeItem(key));
+
+  authorizedImageCache.forEach((objectUrl) => {
+    try {
+      URL.revokeObjectURL(objectUrl);
+    } catch (_) {
+      // Ignore stale object URL cleanup errors.
+    }
+  });
+  authorizedImageCache.clear();
 }
 
 const authorizedImageCache = new Map();

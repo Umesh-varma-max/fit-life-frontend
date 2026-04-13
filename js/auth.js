@@ -10,14 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupWelcomeState() {
   const cta = document.getElementById('open-login');
   const logoutBtn = document.getElementById('welcome-logout');
-  const hasSession = Boolean(getToken() && getUser());
+  const hasSession = hasStoredSession();
   if (!cta) return;
 
   if (hasSession) {
     cta.textContent = 'Continue to Dashboard';
     logoutBtn?.classList.remove('onboarding-hidden');
     cta.addEventListener('click', () => {
-      window.location.href = 'dashboard.html';
+      window.location.replace('dashboard.html');
     });
     logoutBtn?.addEventListener('click', async () => {
       try { await authAPI.logout(); } catch (_) {}
@@ -49,7 +49,7 @@ function setupAuthEntrySheet() {
   };
 
   openBtn?.addEventListener('click', () => {
-    if (getToken() && getUser()) return;
+    if (hasStoredSession()) return;
     setLoginMode(true);
     document.getElementById('login-email')?.focus();
   });
@@ -62,7 +62,7 @@ function setupAuthEntrySheet() {
   });
 
   if (params.get('login') === '1') {
-    if (getToken() && getUser()) return;
+    if (hasStoredSession()) return;
     shell.classList.add('auth-force-login');
     document.getElementById('login-email')?.focus();
   }
@@ -149,7 +149,7 @@ function setupLoginForm() {
       localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(data.user));
       showToast('Welcome back! 🎉', 'success');
       setTimeout(() => {
-        window.location.href = 'dashboard.html';
+        window.location.replace('dashboard.html');
       }, 500);
     } catch (err) {
       const errorMsg = document.getElementById('login-error-msg');
@@ -201,7 +201,7 @@ function setupRegisterForm() {
       await authAPI.register({ full_name, email, password });
       showToast('Account created! Please sign in.', 'success');
       setTimeout(() => {
-        window.location.href = 'index.html?login=1';
+        window.location.replace('index.html?login=1');
       }, 1000);
     } catch (err) {
       if (err.errors) {
