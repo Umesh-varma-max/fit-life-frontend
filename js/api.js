@@ -367,6 +367,7 @@ const workoutAPI = {
   logTimer: (body) => apiFetch('/workout/timer', { method: 'POST', body: JSON.stringify(body) }),
   startSession: (body = {}) => apiFetch('/workout/session/start', { method: 'POST', body: JSON.stringify(body) }),
   getActiveSession: () => apiFetch('/workout/session/active'),
+  completeSet: (id, body) => apiFetch(`/workout/session/${id}/set-complete`, { method: 'POST', body: JSON.stringify(body) }),
   completeExercise: (id, body) => apiFetch(`/workout/session/${id}/exercise-complete`, { method: 'POST', body: JSON.stringify(body) }),
   completeSession: (id, body) => apiFetch(`/workout/session/${id}/complete`, { method: 'POST', body: JSON.stringify(body) }),
   resetSession: (id) => apiFetch(`/workout/session/${id}/reset`, { method: 'POST' })

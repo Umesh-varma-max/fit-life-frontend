@@ -2,6 +2,9 @@ let workoutResponse = {};
 let weeklyPlan = [];
 let todayPlan = null;
 let currentExerciseIndex = 0;
+let currentSetIndex = 0;
+let currentSetNumber = 1;
+let totalSetsCurrentExercise = 1;
 let completedExercises = [];
 let totalDurationSeconds = 0;
 let totalCaloriesBurned = 0;
@@ -11,6 +14,7 @@ let timerMode = 'exercise';
 let timerRunning = false;
 let sessionId = null;
 let sessionCompleted = false;
+let pendingNextSetDurationSeconds = 0;
 const WORKOUT_LOGGED_SESSIONS_KEY = 'fitlife_logged_workout_sessions';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -223,9 +227,11 @@ function renderTodayPlan(planItem) {
 function renderExerciseCard(exercise, index) {
   const mediaMarkup = renderExerciseMedia(exercise);
   const detailBits = [];
-  if (exercise.sets) detailBits.push(`${exercise.sets} sets`);
+  const totalSets = getTotalSets(exercise);
+  if (totalSets > 1) detailBits.push(`${totalSets} sets`);
+  else if (exercise.sets) detailBits.push(`${exercise.sets} sets`);
   if (exercise.reps) detailBits.push(`${exercise.reps} reps`);
-  if (exercise.duration_seconds) detailBits.push(`${exercise.duration_seconds} sec`);
+  if (getSetDurationSeconds(exercise)) detailBits.push(`${getSetDurationSeconds(exercise)} sec`);
   if (exercise.rest_seconds) detailBits.push(`${exercise.rest_seconds} sec rest`);
   if (exercise.estimated_calories_burn) detailBits.push(`${exercise.estimated_calories_burn} kcal`);
 
@@ -243,12 +249,14 @@ function renderExerciseCard(exercise, index) {
           </div>
           <div class="exercise-inline-controls">
             <div class="exercise-inline-timer">
-              <span class="exercise-inline-timer-label">Timer</span>
+              <span class="exercise-inline-timer-label">${totalSets > 1 ? `Set 1 / ${totalSets}` : 'Timer'}</span>
               <strong id="exercise-timer-${index}" class="exercise-inline-timer-value">${formatTimer(getExerciseSeconds(exercise))}</strong>
             </div>
             <div class="exercise-inline-actions">
               <button type="button" class="btn btn-sm btn-ghost js-start-exercise" data-exercise-index="${index}">Start Timer</button>
-              <button type="button" class="btn btn-sm btn-success js-complete-exercise" data-exercise-index="${index}">Complete</button>
+              <button type="button" class="btn btn-sm btn-success js-complete-exercise" data-exercise-index="${index}">Complete Set</button>
+              <button type="button" class="btn btn-sm btn-outline js-finish-exercise" data-exercise-index="${index}">Complete Exercise</button>
+              <button type="button" class="btn btn-sm btn-outline js-reset-workout" data-exercise-index="${index}">Reset Workout</button>
             </div>
           </div>
         </div>
@@ -271,8 +279,22 @@ function handleExerciseCardAction(event) {
   if (completeButton) {
     const index = Number(completeButton.dataset.exerciseIndex);
     if (!Number.isNaN(index)) {
+      completeSetFromCard(index);
+    }
+    return;
+  }
+
+  const finishExerciseButton = event.target.closest('.js-finish-exercise');
+  if (finishExerciseButton) {
+    const index = Number(finishExerciseButton.dataset.exerciseIndex);
+    if (!Number.isNaN(index)) {
       completeExerciseFromCard(index);
     }
+    return;
+  }
+
+  if (event.target.closest('.js-reset-workout')) {
+    resetWorkoutSession();
   }
 }
 
@@ -352,9 +374,13 @@ function hydrateEmptySession() {
   sessionId = null;
   sessionCompleted = false;
   currentExerciseIndex = 0;
+  currentSetIndex = 0;
+  currentSetNumber = 1;
+  totalSetsCurrentExercise = 1;
   completedExercises = [];
   totalDurationSeconds = 0;
   totalCaloriesBurned = 0;
+  pendingNextSetDurationSeconds = 0;
 
   document.getElementById('completion-summary')?.classList.add('hidden');
   document.getElementById('timer-section')?.classList.add('hidden');
@@ -370,6 +396,11 @@ async function tryRestoreActiveSession() {
       hydrateActiveSession(activeSession);
     }
   } catch (error) {
+    if (error?.status === 404) {
+      hydrateEmptySession();
+      updateEmptyWorkoutPrompt();
+      return;
+    }
     if (error?.status !== 404) {
       console.error('Failed to restore active workout session:', error.payload || error);
     }
@@ -383,21 +414,27 @@ function hydrateActiveSession(session) {
   completedExercises = Array.isArray(session.completed_exercises)
     ? session.completed_exercises.map((item) => typeof item === 'string' ? item : item?.name).filter(Boolean)
     : [];
+  currentSetIndex = Number(session.current_set_index ?? Math.max(0, Number(session.current_set_number || 1) - 1));
+  currentSetNumber = Number(session.current_set_number || currentSetIndex + 1 || 1);
+  totalSetsCurrentExercise = Number(session.total_sets_current_exercise || getTotalSets(session.current_exercise || getCurrentExercise()) || 1);
   totalDurationSeconds = Number(session.total_duration_seconds || 0);
   totalCaloriesBurned = Number(session.total_calories_burned || 0);
   timerMode = 'exercise';
   timerRemaining = resolveSessionTimerSeed(session);
+  pendingNextSetDurationSeconds = 0;
 
   document.getElementById('timer-section')?.classList.remove('hidden');
   document.getElementById('completion-summary')?.classList.add('hidden');
   updateTimerPanel();
   highlightExerciseCards();
   updateSessionControls();
+  playTimerSignal(session.timer_signal);
 }
 
 function resolveSessionTimerSeed(session) {
   const currentExercise = session.current_exercise || getCurrentExercise();
-  return currentExercise ? getExerciseSeconds(currentExercise) : 0;
+  if (!currentExercise) return 0;
+  return Number(session.next_duration_seconds || session.set_duration_seconds || getExerciseSeconds(currentExercise) || 0);
 }
 
 async function handleStartSession() {
@@ -447,8 +484,12 @@ async function startExerciseFromCard(index) {
   }
 
   currentExerciseIndex = index;
+  currentSetIndex = 0;
+  currentSetNumber = 1;
+  totalSetsCurrentExercise = getTotalSets(getCurrentExercise());
   timerMode = 'exercise';
   timerRemaining = getExerciseSeconds(getCurrentExercise());
+  pendingNextSetDurationSeconds = 0;
   updateTimerPanel();
   highlightExerciseCards();
   updateSessionControls();
@@ -459,6 +500,31 @@ async function startExerciseFromCard(index) {
   }
 
   await handleStartSession();
+}
+
+async function completeSetFromCard(index) {
+  if (index !== currentExerciseIndex) {
+    if (index < completedExercises.length) {
+      showToast('This exercise is already completed.', 'info');
+      return;
+    }
+    if (index > completedExercises.length) {
+      showToast('Complete the earlier exercise first to keep the session in order.', 'warning');
+      return;
+    }
+
+    currentExerciseIndex = index;
+    currentSetIndex = 0;
+    currentSetNumber = 1;
+    totalSetsCurrentExercise = getTotalSets(getCurrentExercise());
+    timerMode = 'exercise';
+    timerRemaining = getExerciseSeconds(getCurrentExercise());
+    updateTimerPanel();
+    highlightExerciseCards();
+    updateSessionControls();
+  }
+
+  await completeCurrentSet();
 }
 
 async function completeExerciseFromCard(index) {
@@ -507,11 +573,14 @@ function startTimerLoop() {
         return;
       }
 
-      if (timerMode === 'exercise' && Number(exercise.rest_seconds || 0) > 0) {
-        timerMode = 'rest';
-        timerRemaining = Number(exercise.rest_seconds || 0);
+      if (timerMode === 'rest') {
+        playTimerSignal({ should_play_sound: true, sound_cue: 'beep', reason: 'rest_complete', repeat_count: 1 });
+        timerMode = 'exercise';
+        timerRemaining = Number(pendingNextSetDurationSeconds || getExerciseSeconds(exercise));
+        pendingNextSetDurationSeconds = 0;
         startTimerLoop();
       } else {
+        playTimerSignal({ should_play_sound: true, sound_cue: 'beep', reason: 'set_complete', repeat_count: 1 });
         showToast(`${exercise.name || 'Exercise'} timer complete`, 'success');
         updateSessionControls();
       }
@@ -554,7 +623,7 @@ async function completeCurrentExercise() {
   timerRunning = false;
 
   const caloriesEarned = Number(exercise.estimated_calories_burn || 0);
-  totalCaloriesBurned += caloriesEarned;
+  totalCaloriesBurned += Math.max(0, caloriesEarned - estimateCompletedSetCalories(exercise));
 
   try {
     const response = await workoutAPI.completeExercise(sessionId, {
@@ -562,16 +631,24 @@ async function completeCurrentExercise() {
       calories_burned: caloriesEarned
     });
 
-    completedExercises.push(exercise.name || `Exercise ${currentExerciseIndex + 1}`);
-    currentExerciseIndex += 1;
-    timerMode = 'exercise';
-    timerRemaining = getCurrentExercise() ? getExerciseSeconds(getCurrentExercise()) : 0;
-
     const returnedSession = response.active_session || response.session || response;
     if (returnedSession && typeof returnedSession === 'object') {
       sessionId = returnedSession.id || returnedSession.session_id || sessionId;
       totalDurationSeconds = Number(returnedSession.total_duration_seconds || totalDurationSeconds);
       totalCaloriesBurned = Number(returnedSession.total_calories_burned || totalCaloriesBurned);
+    }
+
+    if (!returnedSession || typeof returnedSession !== 'object') {
+      completedExercises.push(exercise.name || `Exercise ${currentExerciseIndex + 1}`);
+      currentExerciseIndex += 1;
+      currentSetIndex = 0;
+      currentSetNumber = 1;
+      totalSetsCurrentExercise = getTotalSets(getCurrentExercise());
+      timerMode = 'exercise';
+      timerRemaining = getCurrentExercise() ? getExerciseSeconds(getCurrentExercise()) : 0;
+      pendingNextSetDurationSeconds = 0;
+    } else {
+      hydrateActiveSession(returnedSession);
     }
 
     if (!getCurrentExercise()) {
@@ -586,6 +663,104 @@ async function completeCurrentExercise() {
   } catch (error) {
     console.error('Failed to complete exercise:', error.payload || error);
     showToast(error.message || 'Could not complete this exercise', 'error');
+  }
+}
+
+async function completeCurrentSet() {
+  const exercise = getCurrentExercise();
+  if (!exercise) return;
+
+  if (!sessionId) {
+    await handleStartSession();
+    if (!sessionId) return;
+  }
+
+  clearInterval(timerInterval);
+  timerInterval = null;
+  timerRunning = false;
+
+  const setNumber = currentSetNumber || (currentSetIndex + 1);
+  const setDurationSeconds = getSetDurationSeconds(exercise);
+  const caloriesEarned = estimateSetCalories(exercise);
+
+  try {
+    const response = await workoutAPI.completeSet(sessionId, {
+      duration_seconds: setDurationSeconds,
+      calories_burned: caloriesEarned,
+      set_number: setNumber
+    });
+
+    totalCaloriesBurned += caloriesEarned;
+    totalDurationSeconds = Number(response.total_duration_seconds || response.active_session?.total_duration_seconds || totalDurationSeconds);
+    totalCaloriesBurned = Number(response.total_calories_burned || response.active_session?.total_calories_burned || totalCaloriesBurned);
+
+    playTimerSignal(response.timer_signal);
+
+    const returnedSession = response.active_session || response.session || response;
+    const hasReturnedSession = returnedSession && typeof returnedSession === 'object';
+    if (hasReturnedSession) {
+      hydrateActiveSession(returnedSession);
+    } else {
+      currentSetIndex = Math.min(currentSetIndex + 1, Math.max(0, totalSetsCurrentExercise - 1));
+      currentSetNumber = currentSetIndex + 1;
+    }
+
+    if (response.finished_all) {
+      await completeWholeWorkout();
+      return;
+    }
+
+    if (response.finished_exercise) {
+      const completedName = exercise.name || `Exercise ${currentExerciseIndex + 1}`;
+      if (!completedExercises.includes(completedName)) {
+        completedExercises.push(completedName);
+      }
+      if (!hasReturnedSession) {
+        currentExerciseIndex += 1;
+        currentSetIndex = 0;
+        currentSetNumber = 1;
+        totalSetsCurrentExercise = getTotalSets(getCurrentExercise());
+        timerMode = 'exercise';
+        timerRemaining = getCurrentExercise() ? getExerciseSeconds(getCurrentExercise()) : 0;
+        pendingNextSetDurationSeconds = 0;
+      }
+      updateTimerPanel();
+      highlightExerciseCards();
+      updateSessionControls();
+      showToast(`${exercise.name || 'Exercise'} completed`, 'success');
+      return;
+    }
+
+    if (response.timer_reset?.should_reset) {
+      pendingNextSetDurationSeconds = Number(response.timer_reset.next_duration_seconds || getExerciseSeconds(exercise));
+      if (Number(response.timer_reset.rest_seconds || 0) > 0) {
+        timerMode = 'rest';
+        timerRemaining = Number(response.timer_reset.rest_seconds || 0);
+        startTimerLoop();
+      } else {
+        timerMode = 'exercise';
+        timerRemaining = pendingNextSetDurationSeconds;
+        pendingNextSetDurationSeconds = 0;
+        updateTimerPanel();
+        updateSessionControls();
+      }
+    } else {
+      timerMode = 'exercise';
+      timerRemaining = getExerciseSeconds(exercise);
+      updateTimerPanel();
+      updateSessionControls();
+    }
+
+    showToast(`Set ${setNumber} completed`, 'success');
+  } catch (error) {
+    console.error('Failed to complete set:', error.payload || error);
+    if (error?.status === 404) {
+      hydrateEmptySession();
+      updateEmptyWorkoutPrompt();
+      showToast('Previous workout session expired. Start today\'s workout again.', 'warning');
+      return;
+    }
+    showToast(error.message || 'Could not complete this set', 'error');
   }
 }
 
@@ -679,7 +854,7 @@ function updateTimerPanel() {
   }
 
   setText('active-exercise-name', exercise.name || 'Exercise');
-  setText('active-exercise-meta', buildCompactExerciseMeta(exercise));
+  setText('active-exercise-meta', `Set ${currentSetNumber} / ${Math.max(1, totalSetsCurrentExercise)} | ${buildCompactExerciseMeta(exercise)}`);
   setText('timer-display', formatTimer(timerRemaining || getExerciseSeconds(exercise)));
   setText('next-exercise-name', nextExercise?.name || 'Finish line');
   setText('next-exercise-meta', nextExercise ? buildCompactExerciseMeta(nextExercise) : 'Complete this exercise to finish the workout');
@@ -723,6 +898,8 @@ function refreshInlineExercisePanels() {
     const timerNode = document.getElementById(`exercise-timer-${index}`);
     const startButton = document.querySelector(`.js-start-exercise[data-exercise-index="${index}"]`);
     const completeButton = document.querySelector(`.js-complete-exercise[data-exercise-index="${index}"]`);
+    const finishButton = document.querySelector(`.js-finish-exercise[data-exercise-index="${index}"]`);
+    const resetButton = document.querySelector(`.js-reset-workout[data-exercise-index="${index}"]`);
     const isCompleted = index < completedExercises.length;
     const isActive = index === currentExerciseIndex && !!getCurrentExercise();
     const isLocked = index > completedExercises.length;
@@ -734,7 +911,15 @@ function refreshInlineExercisePanels() {
     }
 
     if (timerLabel) {
-      timerLabel.textContent = isCompleted ? 'Done' : (isActive && timerMode === 'rest' ? 'Rest' : 'Timer');
+      if (isCompleted) {
+        timerLabel.textContent = 'Done';
+      } else if (isActive) {
+        timerLabel.textContent = timerMode === 'rest'
+          ? `Rest before Set ${Math.min(currentSetNumber + 1, totalSetsCurrentExercise)}`
+          : `Set ${currentSetNumber} / ${Math.max(1, totalSetsCurrentExercise)}`;
+      } else {
+        timerLabel.textContent = `Set 1 / ${Math.max(1, getTotalSets(exercise))}`;
+      }
     }
 
     if (startButton) {
@@ -748,7 +933,16 @@ function refreshInlineExercisePanels() {
 
     if (completeButton) {
       completeButton.disabled = isCompleted || isLocked;
-      completeButton.textContent = isCompleted ? 'Completed' : 'Complete';
+      completeButton.textContent = isCompleted ? 'Completed' : 'Complete Set';
+    }
+
+    if (finishButton) {
+      finishButton.disabled = isCompleted || isLocked;
+      finishButton.textContent = isCompleted ? 'Exercise Done' : 'Complete Exercise';
+    }
+
+    if (resetButton) {
+      resetButton.disabled = !sessionId && !timerRunning && !isActive;
     }
   });
 }
@@ -814,11 +1008,72 @@ function markWorkoutLogPersisted(key) {
 }
 
 function getExerciseSeconds(exercise) {
-  const durationSeconds = Number(exercise.duration_seconds || 0);
+  const durationSeconds = Number(
+    exercise.set_duration_seconds ||
+    exercise.timer_config?.set_duration_seconds ||
+    exercise.duration_seconds ||
+    0
+  );
   if (durationSeconds > 0) return durationSeconds;
 
   const estimatedMinutes = Number(exercise.estimated_duration_min || exercise.duration_min || 0);
   return Math.max(30, estimatedMinutes * 60 || 60);
+}
+
+function getTotalSets(exercise) {
+  return Math.max(1, Number(exercise?.total_sets || exercise?.sets || exercise?.timer_config?.total_sets || 1));
+}
+
+function getSetDurationSeconds(exercise) {
+  return Math.max(1, Number(
+    exercise?.set_duration_seconds ||
+    exercise?.timer_config?.set_duration_seconds ||
+    exercise?.duration_seconds ||
+    getExerciseSeconds(exercise)
+  ));
+}
+
+function estimateSetCalories(exercise) {
+  const totalCalories = Number(exercise?.estimated_calories_burn || 0);
+  const totalSets = getTotalSets(exercise);
+  return totalSets > 0 ? Number((totalCalories / totalSets).toFixed(2)) : totalCalories;
+}
+
+function estimateCompletedSetCalories(exercise) {
+  return estimateSetCalories(exercise) * Math.max(0, currentSetIndex);
+}
+
+function updateEmptyWorkoutPrompt() {
+  if (getCurrentExercise()) return;
+  setText('today-plan-meta', 'Start today\'s workout to begin a fresh weekly session.');
+}
+
+function playTimerSignal(signal) {
+  if (!signal?.should_play_sound) return;
+  const repeatCount = Math.max(1, Number(signal.repeat_count || 1));
+
+  for (let i = 0; i < repeatCount; i += 1) {
+    window.setTimeout(() => {
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        const audioContext = new AudioContextClass();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = signal.reason === 'exercise_complete' ? 1046 : 880;
+        gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.2, audioContext.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.22);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.24);
+      } catch (_) {
+        // Ignore audio errors on unsupported or blocked devices.
+      }
+    }, i * 260);
+  }
 }
 
 function resolveExerciseMedia(exercise) {
