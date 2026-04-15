@@ -745,6 +745,9 @@ async function completeCurrentExercise() {
 async function completeCurrentSet() {
   const exercise = getCurrentExercise();
   if (!exercise) return;
+  const previousExerciseIndex = currentExerciseIndex;
+  const previousExerciseName = exercise.name || `Exercise ${currentExerciseIndex + 1}`;
+  const previousSetNumber = currentSetNumber || (currentSetIndex + 1);
 
   if (!sessionId && !localSessionMode) {
     await handleStartSession();
@@ -823,37 +826,75 @@ async function completeCurrentSet() {
 
     const returnedSession = response.active_session || response.session || response;
     const hasReturnedSession = returnedSession && typeof returnedSession === 'object';
-    if (hasReturnedSession) {
-      hydrateActiveSession(returnedSession);
-    } else {
-      currentSetIndex = Math.min(currentSetIndex + 1, Math.max(0, totalSetsCurrentExercise - 1));
-      currentSetNumber = currentSetIndex + 1;
-    }
+    const completedSet = response.completed_set || {};
+    const resolvedTotalSets = Number(
+      returnedSession?.total_sets_current_exercise ||
+      response.session?.total_sets_current_exercise ||
+      completedSet.total_sets ||
+      totalSetsCurrentExercise ||
+      getTotalSets(exercise)
+    );
+    const nextSetNumber = Number(
+      returnedSession?.current_set_number ||
+      response.session?.current_set_number ||
+      (completedSet.set_number ? Number(completedSet.set_number) + 1 : previousSetNumber + 1)
+    );
 
     if (response.finished_all) {
+      if (response.finished_exercise && !completedExercises.includes(previousExerciseName)) {
+        completedExercises.push(previousExerciseName);
+      }
       await completeWholeWorkout();
       return;
     }
 
     if (response.finished_exercise) {
-      const completedName = exercise.name || `Exercise ${currentExerciseIndex + 1}`;
-      if (!completedExercises.includes(completedName)) {
-        completedExercises.push(completedName);
+      if (!completedExercises.includes(previousExerciseName)) {
+        completedExercises.push(previousExerciseName);
       }
-      if (!hasReturnedSession) {
-        currentExerciseIndex += 1;
-        currentSetIndex = 0;
-        currentSetNumber = 1;
-        totalSetsCurrentExercise = getTotalSets(getCurrentExercise());
-        timerMode = 'exercise';
-        timerRemaining = getCurrentExercise() ? getExerciseSeconds(getCurrentExercise()) : 0;
-        pendingNextSetDurationSeconds = 0;
+      if (hasReturnedSession) {
+        sessionId = returnedSession.id || returnedSession.session_id || sessionId;
+        currentExerciseIndex = Number(returnedSession.current_exercise_index ?? (previousExerciseIndex + 1));
+        totalDurationSeconds = Number(returnedSession.total_duration_seconds || totalDurationSeconds);
+        totalCaloriesBurned = Number(returnedSession.total_calories_burned || totalCaloriesBurned);
+      } else {
+        currentExerciseIndex = previousExerciseIndex + 1;
       }
+
+      currentSetIndex = 0;
+      currentSetNumber = 1;
+      totalSetsCurrentExercise = getTotalSets(getCurrentExercise());
+      timerMode = 'exercise';
+      timerRemaining = getCurrentExercise() ? getExerciseSeconds(getCurrentExercise()) : 0;
+      pendingNextSetDurationSeconds = 0;
+
+      if (!getCurrentExercise()) {
+        await completeWholeWorkout();
+        return;
+      }
+
       updateTimerPanel();
       highlightExerciseCards();
       updateSessionControls();
       showToast(`${exercise.name || 'Exercise'} completed`, 'success');
       return;
+    }
+
+    // Single set completed only: keep the same exercise active and advance set state.
+    completedExercises = completedExercises.filter((name) => name !== previousExerciseName);
+    currentExerciseIndex = previousExerciseIndex;
+
+    if (hasReturnedSession) {
+      sessionId = returnedSession.id || returnedSession.session_id || sessionId;
+      totalDurationSeconds = Number(returnedSession.total_duration_seconds || totalDurationSeconds);
+      totalCaloriesBurned = Number(returnedSession.total_calories_burned || totalCaloriesBurned);
+      totalSetsCurrentExercise = Math.max(1, resolvedTotalSets);
+      currentSetNumber = Math.min(Math.max(1, nextSetNumber), totalSetsCurrentExercise);
+      currentSetIndex = Math.max(0, currentSetNumber - 1);
+    } else {
+      totalSetsCurrentExercise = getTotalSets(exercise);
+      currentSetNumber = Math.min(previousSetNumber + 1, totalSetsCurrentExercise);
+      currentSetIndex = Math.max(0, currentSetNumber - 1);
     }
 
     if (response.timer_reset?.should_reset) {
@@ -876,7 +917,8 @@ async function completeCurrentSet() {
       updateSessionControls();
     }
 
-    showToast(`Set ${setNumber} completed`, 'success');
+    highlightExerciseCards();
+    showToast(`Set ${setNumber} completed. ${getRemainingSetsLabel(exercise)} remaining.`, 'success');
   } catch (error) {
     console.error('Failed to complete set:', error.payload || error);
     if (error?.status === 404) {
@@ -982,7 +1024,10 @@ function updateTimerPanel() {
   }
 
   setText('active-exercise-name', exercise.name || 'Exercise');
-  setText('active-exercise-meta', `Set ${currentSetNumber} / ${Math.max(1, totalSetsCurrentExercise)} | ${buildCompactExerciseMeta(exercise)}`);
+  setText(
+    'active-exercise-meta',
+    `Set ${currentSetNumber} / ${Math.max(1, totalSetsCurrentExercise)} | ${getRemainingSetsLabel(exercise)} remaining | ${buildCompactExerciseMeta(exercise)}`
+  );
   setText('timer-display', formatTimer(timerRemaining || getExerciseSeconds(exercise)));
   setText('next-exercise-name', nextExercise?.name || 'Finish line');
   setText('next-exercise-meta', nextExercise ? buildCompactExerciseMeta(nextExercise) : 'Complete this exercise to finish the workout');
@@ -1043,8 +1088,8 @@ function refreshInlineExercisePanels() {
         timerLabel.textContent = 'Done';
       } else if (isActive) {
         timerLabel.textContent = timerMode === 'rest'
-          ? `Rest before Set ${Math.min(currentSetNumber + 1, totalSetsCurrentExercise)}`
-          : `Set ${currentSetNumber} / ${Math.max(1, totalSetsCurrentExercise)}`;
+          ? `Rest before Set ${Math.min(currentSetNumber, totalSetsCurrentExercise)}`
+          : `Set ${currentSetNumber} / ${Math.max(1, totalSetsCurrentExercise)} • ${getRemainingSetsLabel(exercise)} left`;
       } else {
         timerLabel.textContent = `Set 1 / ${Math.max(1, getTotalSets(exercise))}`;
       }
@@ -1169,6 +1214,12 @@ function estimateSetCalories(exercise) {
 
 function estimateCompletedSetCalories(exercise) {
   return estimateSetCalories(exercise) * Math.max(0, currentSetIndex);
+}
+
+function getRemainingSetsLabel(exercise) {
+  const totalSets = Math.max(1, totalSetsCurrentExercise || getTotalSets(exercise));
+  const remainingSets = Math.max(0, totalSets - currentSetNumber + 1);
+  return `${remainingSets} set${remainingSets === 1 ? '' : 's'}`;
 }
 
 function updateEmptyWorkoutPrompt() {
