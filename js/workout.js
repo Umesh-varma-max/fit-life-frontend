@@ -15,6 +15,8 @@ let timerRunning = false;
 let sessionId = null;
 let sessionCompleted = false;
 let pendingNextSetDurationSeconds = 0;
+let localSessionMode = false;
+let sharedAudioContext = null;
 const WORKOUT_LOGGED_SESSIONS_KEY = 'fitlife_logged_workout_sessions';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -61,6 +63,19 @@ async function loadWorkoutPlan(showLoading = true) {
     }
   } catch (error) {
     console.error('Failed to load workout plan:', error.payload || error);
+    if (!cachedWorkout) {
+      const fallback = buildFallbackWorkoutResponse();
+      workoutResponse = fallback;
+      weeklyPlan = Array.isArray(fallback.plan) ? fallback.plan : [];
+      todayPlan = deriveTodayPlan(weeklyPlan);
+      renderGoalHero(workoutResponse);
+      renderWorkoutStats(buildWorkoutStats(workoutResponse, todayPlan, weeklyPlan));
+      renderTodayPlan(todayPlan);
+      renderWeeklyPlan(weeklyPlan);
+      hydrateEmptySession();
+      showToast('Showing fallback workout plan while live service catches up.', 'warning');
+      return;
+    }
     renderWorkoutError(error);
   }
 }
@@ -373,6 +388,7 @@ function hydrateEmptySession() {
   timerMode = 'exercise';
   sessionId = null;
   sessionCompleted = false;
+  localSessionMode = false;
   currentExerciseIndex = 0;
   currentSetIndex = 0;
   currentSetNumber = 1;
@@ -437,6 +453,26 @@ function resolveSessionTimerSeed(session) {
   return Number(session.next_duration_seconds || session.set_duration_seconds || getExerciseSeconds(currentExercise) || 0);
 }
 
+function initializeLocalSession() {
+  localSessionMode = true;
+  sessionCompleted = false;
+  sessionId = null;
+  if (!getCurrentExercise()) {
+    currentExerciseIndex = 0;
+  }
+  currentSetIndex = Math.max(0, currentSetIndex || 0);
+  currentSetNumber = currentSetIndex + 1;
+  totalSetsCurrentExercise = getTotalSets(getCurrentExercise());
+  timerMode = 'exercise';
+  timerRemaining = getCurrentExercise() ? getExerciseSeconds(getCurrentExercise()) : 0;
+  pendingNextSetDurationSeconds = 0;
+  document.getElementById('timer-section')?.classList.remove('hidden');
+  document.getElementById('completion-summary')?.classList.add('hidden');
+  updateTimerPanel();
+  highlightExerciseCards();
+  updateSessionControls();
+}
+
 async function handleStartSession() {
   if (!todayPlan?.exercises?.length) {
     showToast('No workout is scheduled for today.', 'warning');
@@ -446,12 +482,13 @@ async function handleStartSession() {
   if (!sessionId) {
     try {
       const response = await workoutAPI.startSession({ day: todayPlan.day || getDayName() });
+      localSessionMode = false;
       hydrateActiveSession(response.active_session || response.session || response);
       showToast('Workout session started', 'success');
     } catch (error) {
       console.error('Failed to start workout session:', error.payload || error);
-      showToast(error.message || 'Could not start workout session', 'error');
-      return;
+      initializeLocalSession();
+      showToast('Live session unavailable. Started a local workout timer instead.', 'warning');
     }
   }
 
@@ -490,6 +527,7 @@ async function startExerciseFromCard(index) {
   timerMode = 'exercise';
   timerRemaining = getExerciseSeconds(getCurrentExercise());
   pendingNextSetDurationSeconds = 0;
+  primeWorkoutAudio();
   updateTimerPanel();
   highlightExerciseCards();
   updateSessionControls();
@@ -500,6 +538,19 @@ async function startExerciseFromCard(index) {
   }
 
   await handleStartSession();
+}
+
+function primeWorkoutAudio() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    sharedAudioContext = sharedAudioContext || new AudioContextClass();
+    if (sharedAudioContext.state === 'suspended') {
+      sharedAudioContext.resume();
+    }
+  } catch (_) {
+    // Ignore audio priming errors.
+  }
 }
 
 async function completeSetFromCard(index) {
@@ -613,9 +664,9 @@ async function completeCurrentExercise() {
   const exercise = getCurrentExercise();
   if (!exercise) return;
 
-  if (!sessionId) {
+  if (!sessionId && !localSessionMode) {
     await handleStartSession();
-    if (!sessionId) return;
+    if (!sessionId && !localSessionMode) return;
   }
 
   clearInterval(timerInterval);
@@ -624,6 +675,31 @@ async function completeCurrentExercise() {
 
   const caloriesEarned = Number(exercise.estimated_calories_burn || 0);
   totalCaloriesBurned += Math.max(0, caloriesEarned - estimateCompletedSetCalories(exercise));
+
+  if (localSessionMode && !sessionId) {
+    const completedName = exercise.name || `Exercise ${currentExerciseIndex + 1}`;
+    if (!completedExercises.includes(completedName)) {
+      completedExercises.push(completedName);
+    }
+    currentExerciseIndex += 1;
+    currentSetIndex = 0;
+    currentSetNumber = 1;
+    totalSetsCurrentExercise = getTotalSets(getCurrentExercise());
+    timerMode = 'exercise';
+    timerRemaining = getCurrentExercise() ? getExerciseSeconds(getCurrentExercise()) : 0;
+    pendingNextSetDurationSeconds = 0;
+
+    if (!getCurrentExercise()) {
+      await completeWholeWorkout();
+      return;
+    }
+
+    updateTimerPanel();
+    highlightExerciseCards();
+    updateSessionControls();
+    showToast(`${exercise.name || 'Exercise'} completed`, 'success');
+    return;
+  }
 
   try {
     const response = await workoutAPI.completeExercise(sessionId, {
@@ -670,9 +746,9 @@ async function completeCurrentSet() {
   const exercise = getCurrentExercise();
   if (!exercise) return;
 
-  if (!sessionId) {
+  if (!sessionId && !localSessionMode) {
     await handleStartSession();
-    if (!sessionId) return;
+    if (!sessionId && !localSessionMode) return;
   }
 
   clearInterval(timerInterval);
@@ -682,6 +758,55 @@ async function completeCurrentSet() {
   const setNumber = currentSetNumber || (currentSetIndex + 1);
   const setDurationSeconds = getSetDurationSeconds(exercise);
   const caloriesEarned = estimateSetCalories(exercise);
+
+  if (localSessionMode && !sessionId) {
+    totalCaloriesBurned += caloriesEarned;
+    currentSetIndex += 1;
+    currentSetNumber = currentSetIndex + 1;
+    playTimerSignal({ should_play_sound: true, sound_cue: 'beep', reason: 'set_complete', repeat_count: 1 });
+
+    if (currentSetIndex >= Math.max(1, totalSetsCurrentExercise)) {
+      const completedName = exercise.name || `Exercise ${currentExerciseIndex + 1}`;
+      if (!completedExercises.includes(completedName)) {
+        completedExercises.push(completedName);
+      }
+      playTimerSignal({ should_play_sound: true, sound_cue: 'beep', reason: 'exercise_complete', repeat_count: 2 });
+      currentExerciseIndex += 1;
+      currentSetIndex = 0;
+      currentSetNumber = 1;
+      totalSetsCurrentExercise = getTotalSets(getCurrentExercise());
+      timerMode = 'exercise';
+      timerRemaining = getCurrentExercise() ? getExerciseSeconds(getCurrentExercise()) : 0;
+      pendingNextSetDurationSeconds = 0;
+
+      if (!getCurrentExercise()) {
+        await completeWholeWorkout();
+        return;
+      }
+
+      updateTimerPanel();
+      highlightExerciseCards();
+      updateSessionControls();
+      showToast(`${exercise.name || 'Exercise'} completed`, 'success');
+      return;
+    }
+
+    pendingNextSetDurationSeconds = getExerciseSeconds(exercise);
+    if (Number(exercise.rest_seconds || 0) > 0) {
+      timerMode = 'rest';
+      timerRemaining = Number(exercise.rest_seconds || 0);
+      startTimerLoop();
+    } else {
+      timerMode = 'exercise';
+      timerRemaining = pendingNextSetDurationSeconds;
+      pendingNextSetDurationSeconds = 0;
+      updateTimerPanel();
+      updateSessionControls();
+    }
+
+    showToast(`Set ${setNumber} completed`, 'success');
+    return;
+  }
 
   try {
     const response = await workoutAPI.completeSet(sessionId, {
@@ -767,22 +892,25 @@ async function completeCurrentSet() {
 async function completeWholeWorkout() {
   const completedSessionId = sessionId;
 
-  if (!sessionId) {
+  if (!sessionId && !localSessionMode) {
     renderCompletionSummary();
     return;
   }
 
-  try {
-    await workoutAPI.completeSession(sessionId, {
-      total_duration_seconds: totalDurationSeconds,
-      total_calories_burned: totalCaloriesBurned,
-      log_date: new Date().toISOString().slice(0, 10)
-    });
-  } catch (error) {
-    console.error('Failed to complete workout session:', error.payload || error);
+  if (sessionId) {
+    try {
+      await workoutAPI.completeSession(sessionId, {
+        total_duration_seconds: totalDurationSeconds,
+        total_calories_burned: totalCaloriesBurned,
+        log_date: new Date().toISOString().slice(0, 10)
+      });
+    } catch (error) {
+      console.error('Failed to complete workout session:', error.payload || error);
+    }
   }
 
   sessionCompleted = true;
+  localSessionMode = false;
   renderCompletionSummary();
   updateSessionControls();
   showToast('Workout complete!', 'success');
@@ -1048,6 +1176,67 @@ function updateEmptyWorkoutPrompt() {
   setText('today-plan-meta', 'Start today\'s workout to begin a fresh weekly session.');
 }
 
+function buildFallbackWorkoutResponse() {
+  const profile = getCachedProfile() || {};
+  const goal = profile.goal_label || profile.fitness_goal || 'Get Fit';
+  const goalLabel = formatEnumLabel(String(goal).replace(/\s+/g, '_').toLowerCase()).replace(/\b\w/g, (l) => l.toUpperCase());
+  const today = getDayName();
+
+  const fallbackExercises = buildFallbackExercisesForGoal(goalLabel);
+  const plan = [
+    {
+      day: today,
+      plan_name: `${goalLabel} Starter Plan`,
+      total_duration_min: fallbackExercises.reduce((sum, item) => sum + Math.ceil(getExerciseSeconds(item) / 60), 0),
+      total_estimated_calories_burn: fallbackExercises.reduce((sum, item) => sum + Number(item.estimated_calories_burn || 0), 0),
+      exercises: fallbackExercises
+    }
+  ];
+
+  return {
+    goal: String(goal).toLowerCase().replace(/\s+/g, '_'),
+    goal_label: goalLabel,
+    goal_badge: goalLabel.toUpperCase(),
+    goal_eta_weeks: 6,
+    bmi: profile.bmi || null,
+    body_fat_percentage: profile.body_fat_percentage || null,
+    body_fat_category: profile.body_fat_category || '--',
+    workout_stats: {
+      exercise_count: fallbackExercises.length,
+      minutes: plan[0].total_duration_min,
+      calories: plan[0].total_estimated_calories_burn
+    },
+    today_plan: plan[0],
+    plan
+  };
+}
+
+function buildFallbackExercisesForGoal(goalLabel) {
+  const normalizedGoal = String(goalLabel || '').toLowerCase();
+
+  if (normalizedGoal.includes('loss') || normalizedGoal.includes('cut')) {
+    return [
+      { name: 'Brisk Walk March', muscle_group: 'cardio', description: 'Keep a steady pace and controlled breathing.', sets: 3, total_sets: 3, set_duration_seconds: 40, rest_seconds: 20, estimated_calories_burn: 18 },
+      { name: 'Bodyweight Squat', muscle_group: 'legs', description: 'Sit back into the squat and drive through the heels.', sets: 3, total_sets: 3, reps: 12, set_duration_seconds: 35, rest_seconds: 25, estimated_calories_burn: 20 },
+      { name: 'Standing Knee Drive', muscle_group: 'core', description: 'Lift knees high and brace the core each rep.', sets: 3, total_sets: 3, set_duration_seconds: 30, rest_seconds: 20, estimated_calories_burn: 16 }
+    ];
+  }
+
+  if (normalizedGoal.includes('muscle') || normalizedGoal.includes('gain') || normalizedGoal.includes('bulk')) {
+    return [
+      { name: 'Push-Up Hold and Press', muscle_group: 'chest', description: 'Keep shoulders packed and core tight.', sets: 4, total_sets: 4, reps: 10, set_duration_seconds: 40, rest_seconds: 30, estimated_calories_burn: 22 },
+      { name: 'Split Squat', muscle_group: 'legs', description: 'Drop straight down and keep the front knee stable.', sets: 4, total_sets: 4, reps: 10, set_duration_seconds: 40, rest_seconds: 30, estimated_calories_burn: 24 },
+      { name: 'Plank Reach', muscle_group: 'core', description: 'Minimize hip sway while reaching forward.', sets: 3, total_sets: 3, set_duration_seconds: 35, rest_seconds: 20, estimated_calories_burn: 14 }
+    ];
+  }
+
+  return [
+    { name: 'Jumping Jack Step', muscle_group: 'full body', description: 'Maintain a light landing and rhythmic breathing.', sets: 3, total_sets: 3, set_duration_seconds: 30, rest_seconds: 20, estimated_calories_burn: 15 },
+    { name: 'Alternating Reverse Lunge', muscle_group: 'legs', description: 'Step back with control and keep your torso upright.', sets: 3, total_sets: 3, reps: 12, set_duration_seconds: 35, rest_seconds: 20, estimated_calories_burn: 18 },
+    { name: 'Forearm Plank', muscle_group: 'core', description: 'Brace your abs and keep a straight line from head to heel.', sets: 3, total_sets: 3, set_duration_seconds: 30, rest_seconds: 20, estimated_calories_burn: 12 }
+  ];
+}
+
 function playTimerSignal(signal) {
   if (!signal?.should_play_sound) return;
   const repeatCount = Math.max(1, Number(signal.repeat_count || 1));
@@ -1056,19 +1245,26 @@ function playTimerSignal(signal) {
     window.setTimeout(() => {
       try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContextClass) return;
-        const audioContext = new AudioContextClass();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        if (!AudioContextClass) {
+          if (navigator.vibrate) navigator.vibrate(120);
+          return;
+        }
+        sharedAudioContext = sharedAudioContext || new AudioContextClass();
+        if (sharedAudioContext.state === 'suspended') {
+          sharedAudioContext.resume();
+        }
+        const oscillator = sharedAudioContext.createOscillator();
+        const gainNode = sharedAudioContext.createGain();
         oscillator.type = 'sine';
         oscillator.frequency.value = signal.reason === 'exercise_complete' ? 1046 : 880;
-        gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.2, audioContext.currentTime + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.22);
+        gainNode.gain.setValueAtTime(0.0001, sharedAudioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.2, sharedAudioContext.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, sharedAudioContext.currentTime + 0.22);
         oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        gainNode.connect(sharedAudioContext.destination);
         oscillator.start();
-        oscillator.stop(audioContext.currentTime + 0.24);
+        oscillator.stop(sharedAudioContext.currentTime + 0.24);
+        if (navigator.vibrate) navigator.vibrate(80);
       } catch (_) {
         // Ignore audio errors on unsupported or blocked devices.
       }
