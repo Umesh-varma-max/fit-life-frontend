@@ -7,7 +7,7 @@
   background:
     linear-gradient(180deg, rgba(2, 12, 24, 0.34), rgba(3, 10, 18, 0.92)),
     linear-gradient(90deg, rgba(1, 8, 14, 0.58) 0%, rgba(1, 8, 14, 0.16) 42%, rgba(1, 8, 14, 0.68) 100%),
-    url('https://gallery.shakthimaan.com/uploads/k/d/s/kdszajl69v//2018/09/20/20180920121030-6e66d32f.jpg') center/cover no-repeat,
+    url('https://gallery.shakthimaan.com/uploads/k/d/s/kdszajl69v//2018/09/20/20180920121030-6e66d32f.jpg') center 58%/60% auto no-repeat,
     linear-gradient(180deg, rgba(2, 12, 24, 0.24), rgba(3, 10, 18, 0.9)),
     radial-gradient(circle at 18% 78%, rgba(24, 199, 199, 0.16), transparent 26rem),
     radial-gradient(circle at 82% 14%, rgba(102, 213, 103, 0.14), transparent 20rem),
@@ -66,6 +66,17 @@
     background:
       linear-gradient(90deg, rgba(1, 8, 14, 0.86) 0%, rgba(1, 8, 14, 0.34) 44%, rgba(1, 8, 14, 0.82) 100%),
       radial-gradient(circle at 76% 18%, rgba(126, 236, 255, 0.22), transparent 11rem);
+  }
+
+  .welcome-shell {
+    background:
+      linear-gradient(180deg, rgba(2, 12, 24, 0.38), rgba(3, 10, 18, 0.94)),
+      linear-gradient(90deg, rgba(1, 8, 14, 0.62) 0%, rgba(1, 8, 14, 0.2) 42%, rgba(1, 8, 14, 0.72) 100%),
+      url('https://gallery.shakthimaan.com/uploads/k/d/s/kdszajl69v//2018/09/20/20180920121030-6e66d32f.jpg') center 56%/78% auto no-repeat,
+      linear-gradient(180deg, rgba(2, 12, 24, 0.24), rgba(3, 10, 18, 0.9)),
+      radial-gradient(circle at 18% 78%, rgba(24, 199, 199, 0.16), transparent 26rem),
+      radial-gradient(circle at 82% 14%, rgba(102, 213, 103, 0.14), transparent 20rem),
+      linear-gradient(135deg, #051019 4%, #0b2234 48%, #041019 100%);
   }
 
   .welcome-hero {
@@ -816,6 +827,17 @@
 }
 
 @media (min-width: 768px) {
+  .welcome-shell {
+    background:
+      linear-gradient(180deg, rgba(2, 12, 24, 0.34), rgba(3, 10, 18, 0.92)),
+      linear-gradient(90deg, rgba(1, 8, 14, 0.56) 0%, rgba(1, 8, 14, 0.15) 40%, rgba(1, 8, 14, 0.7) 100%),
+      url('https://gallery.shakthimaan.com/uploads/k/d/s/kdszajl69v//2018/09/20/20180920121030-6e66d32f.jpg') center 54%/44% auto no-repeat,
+      linear-gradient(180deg, rgba(2, 12, 24, 0.24), rgba(3, 10, 18, 0.9)),
+      radial-gradient(circle at 18% 78%, rgba(24, 199, 199, 0.16), transparent 26rem),
+      radial-gradient(circle at 82% 14%, rgba(102, 213, 103, 0.14), transparent 20rem),
+      linear-gradient(135deg, #051019 4%, #0b2234 48%, #041019 100%);
+  }
+
   .welcome-hero {
     padding: 3rem;
   }
