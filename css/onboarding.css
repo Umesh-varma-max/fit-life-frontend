@@ -53,35 +53,8 @@
   padding: 2rem 1.5rem max(2rem, env(safe-area-inset-bottom));
 }
 
-.welcome-college-mark {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  width: min(44vw, 320px);
-  aspect-ratio: 1 / 1;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 52%, transparent 74%),
-    url('../assets/college-emblem.svg') center/contain no-repeat;
-  opacity: 0.3;
-  filter: brightness(0) invert(1) drop-shadow(0 0 18px rgba(255, 255, 255, 0.18));
-  pointer-events: none;
-  z-index: 0;
-}
-
 .welcome-copy {
   width: min(100%, 22rem);
-}
-
-.welcome-brand {
-  margin-bottom: 1rem;
-}
-
-.welcome-brand-logo {
-  width: clamp(180px, 58vw, 260px);
-  max-width: 100%;
-  border-radius: 22px;
-  box-shadow: 0 18px 40px rgba(2, 12, 24, 0.28);
 }
 
 @media (max-width: 767px) {
@@ -105,16 +78,6 @@
     width: min(100%, 18rem);
     margin-top: auto;
     padding-bottom: 0.35rem;
-  }
-
-  .welcome-college-mark {
-    width: min(54vw, 230px);
-    opacity: 0.22;
-    transform: translate(-50%, -54%);
-  }
-
-  .welcome-brand-logo {
-    width: min(62vw, 220px);
   }
 
   .welcome-kicker {
@@ -855,12 +818,6 @@
 @media (min-width: 768px) {
   .welcome-hero {
     padding: 3rem;
-  }
-
-  .welcome-college-mark {
-    width: min(28vw, 360px);
-    opacity: 0.24;
-    transform: translate(-20%, -46%);
   }
 
   .welcome-copy {
