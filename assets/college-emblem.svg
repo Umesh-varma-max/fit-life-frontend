@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+  <title id="title">College Emblem</title>
+  <desc id="desc">Monochrome academic emblem with science and technology styling.</desc>
+  <defs>
+    <path id="topArc" d="M42,120a78,78 0 1,1 156,0" />
+    <path id="bottomArc" d="M198,120a78,78 0 1,1 -156,0" />
+  </defs>
+
+  <g fill="none" stroke="#161616" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="120" cy="102" r="72" />
+    <circle cx="120" cy="102" r="4.5" fill="#161616" />
+
+    <path d="M120 32c-17 21-27 45-27 70s10 49 27 70c17-21 27-45 27-70S137 53 120 32Z" />
+    <path d="M58 83c24-8 49-8 72 1s42 24 52 43c-24 8-49 8-72-1S68 107 58 83Z" />
+    <path d="M62 132c23-14 48-21 74-20s49 10 65 29c-23 14-48 21-74 20s-49-10-65-29Z" />
+
+    <path d="M120 65v16" />
+    <path d="M120 123v20" />
+    <path d="M108 77h24" />
+    <path d="M108 133h24" />
+
+    <path d="M20 188h200" />
+    <path d="M32 198h176" />
+    <path d="M40 188l-14 10" />
+    <path d="M200 188l14 10" />
+  </g>
+
+  <text font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="700" letter-spacing="1.2" fill="#111">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">DEPARTMENT OF SCIENCE AND TECHNOLOGY</textPath>
+  </text>
+  <text font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="700" letter-spacing="1.8" fill="#111">
+    <textPath href="#bottomArc" startOffset="50%" text-anchor="middle">VIDYANAGAR</textPath>
+  </text>
+
+  <rect x="74" y="179" width="92" height="17" rx="8.5" fill="#fff" stroke="#161616" stroke-width="2.4" />
+  <text x="120" y="191" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="700" fill="#111">WORK IS WORSHIP</text>
+</svg>

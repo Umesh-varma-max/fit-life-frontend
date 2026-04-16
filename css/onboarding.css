@@ -50,6 +50,20 @@
   padding: 2rem 1.5rem max(2rem, env(safe-area-inset-bottom));
 }
 
+.welcome-college-mark {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: min(42vw, 280px);
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: url('../assets/college-emblem.svg') center/contain no-repeat;
+  opacity: 0.14;
+  filter: grayscale(1) brightness(1.25);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
 .welcome-copy {
   width: min(100%, 22rem);
 }
@@ -86,6 +100,12 @@
     width: min(100%, 18rem);
     margin-top: auto;
     padding-bottom: 0.35rem;
+  }
+
+  .welcome-college-mark {
+    width: min(52vw, 210px);
+    opacity: 0.11;
+    transform: translate(-50%, -54%);
   }
 
   .welcome-brand-logo {
@@ -830,6 +850,12 @@
 @media (min-width: 768px) {
   .welcome-hero {
     padding: 3rem;
+  }
+
+  .welcome-college-mark {
+    width: min(26vw, 320px);
+    opacity: 0.12;
+    transform: translate(-18%, -48%);
   }
 
   .welcome-copy {
