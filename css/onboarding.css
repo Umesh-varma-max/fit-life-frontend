@@ -5,6 +5,9 @@
   position: relative;
   overflow: hidden;
   background:
+    linear-gradient(180deg, rgba(2, 12, 24, 0.34), rgba(3, 10, 18, 0.92)),
+    linear-gradient(90deg, rgba(1, 8, 14, 0.58) 0%, rgba(1, 8, 14, 0.16) 42%, rgba(1, 8, 14, 0.68) 100%),
+    url('https://gallery.shakthimaan.com/uploads/k/d/s/kdszajl69v//2018/09/20/20180920121030-6e66d32f.jpg') center/cover no-repeat,
     linear-gradient(180deg, rgba(2, 12, 24, 0.24), rgba(3, 10, 18, 0.9)),
     radial-gradient(circle at 18% 78%, rgba(24, 199, 199, 0.16), transparent 26rem),
     radial-gradient(circle at 82% 14%, rgba(102, 213, 103, 0.14), transparent 20rem),
@@ -17,9 +20,9 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(1, 8, 14, 0.82) 0%, rgba(1, 8, 14, 0.28) 46%, rgba(1, 8, 14, 0.74) 100%),
-    radial-gradient(circle at 70% 22%, rgba(126, 236, 255, 0.28), transparent 12rem),
-    radial-gradient(circle at 58% 42%, rgba(126, 236, 255, 0.12), transparent 18rem);
+    linear-gradient(90deg, rgba(1, 8, 14, 0.78) 0%, rgba(1, 8, 14, 0.18) 44%, rgba(1, 8, 14, 0.82) 100%),
+    radial-gradient(circle at 70% 22%, rgba(126, 236, 255, 0.24), transparent 12rem),
+    radial-gradient(circle at 58% 42%, rgba(126, 236, 255, 0.1), transparent 18rem);
   pointer-events: none;
 }
 
@@ -88,7 +91,7 @@
 
   .welcome-shell::before {
     background:
-      linear-gradient(90deg, rgba(1, 8, 14, 0.82) 0%, rgba(1, 8, 14, 0.32) 44%, rgba(1, 8, 14, 0.78) 100%),
+      linear-gradient(90deg, rgba(1, 8, 14, 0.86) 0%, rgba(1, 8, 14, 0.34) 44%, rgba(1, 8, 14, 0.82) 100%),
       radial-gradient(circle at 76% 18%, rgba(126, 236, 255, 0.22), transparent 11rem);
   }
 
