@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   restoreChatHistory();
   initChat();
   initVoiceInput();
+  initMobileChatViewport();
   updateWelcomeMessage();
 });
 
@@ -24,6 +25,10 @@ function initChat() {
       event.preventDefault();
       sendMessage();
     }
+  });
+
+  input?.addEventListener('focus', () => {
+    window.setTimeout(() => scrollChatToBottom('smooth'), 180);
   });
 }
 
@@ -126,7 +131,7 @@ function addChatBubble(type, text, meta = {}) {
 
   container.appendChild(bubble);
   wireSuggestionChips(bubble);
-  container.scrollTop = container.scrollHeight;
+  scrollChatToBottom();
 }
 
 function formatAIResponse(text) {
@@ -144,11 +149,10 @@ function formatAIResponse(text) {
 
 function showTyping(show) {
   const indicator = document.getElementById('typing-indicator');
-  const container = document.getElementById('chat-container');
-  if (!indicator || !container) return;
+  if (!indicator) return;
 
   indicator.style.display = show ? 'flex' : 'none';
-  if (show) container.scrollTop = container.scrollHeight;
+  if (show) scrollChatToBottom('smooth');
 }
 
 function initVoiceInput() {
@@ -350,6 +354,46 @@ function updateWelcomeMessage() {
   const bmi = profileContext.bmi ? `Your current BMI is ${profileContext.bmi}.` : '';
   const habit = profileContext.food_habits ? `I will keep your ${formatEnumLabel(profileContext.food_habits)} preference in mind.` : '';
   welcome.innerHTML = escapeHtml(`Hi! I'm your AI Diet Planner. I can help build nutrition guidance around your ${goal} goal. ${bmi} ${habit}`.trim());
+}
+
+function initMobileChatViewport() {
+  const composer = document.querySelector('.chat-input-area');
+  if (!composer) return;
+
+  const refreshComposerOffset = () => {
+    const keyboardOffset = window.visualViewport
+      ? Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop)
+      : 0;
+
+    composer.style.transform = keyboardOffset > 0
+      ? `translateY(-${Math.max(0, keyboardOffset - 8)}px)`
+      : '';
+
+    scrollChatToBottom();
+  };
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', refreshComposerOffset);
+    window.visualViewport.addEventListener('scroll', refreshComposerOffset);
+  } else {
+    window.addEventListener('resize', refreshComposerOffset);
+  }
+
+  refreshComposerOffset();
+}
+
+function scrollChatToBottom(behavior = 'auto') {
+  const container = document.getElementById('chat-container');
+  const typing = document.getElementById('typing-indicator');
+  if (!container) return;
+
+  const bottomTarget = typing && typing.style.display !== 'none' ? typing : container.lastElementChild;
+  if (bottomTarget?.scrollIntoView) {
+    bottomTarget.scrollIntoView({ block: 'end', behavior });
+    return;
+  }
+
+  container.scrollTo({ top: container.scrollHeight, behavior });
 }
 
 function buildPlannerFallback(message, profile) {

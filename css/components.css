@@ -715,13 +715,17 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 16px 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 12px 0 24px;
+  scroll-padding-bottom: 180px;
 }
 
 .chat-bubble {
   display: flex;
   gap: 12px;
-  max-width: 85%;
+  max-width: 84%;
   align-items: flex-start;
 }
 
@@ -766,6 +770,8 @@
   border-radius: 16px 16px 16px 4px;
   padding: 12px 16px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chat-content-user {
@@ -773,6 +779,7 @@
   border: none;
   border-radius: 16px 16px 4px 16px;
   color: #fff;
+  min-width: 120px;
 }
 
 .chat-content-user .chat-text {
@@ -784,10 +791,11 @@
 }
 
 .chat-text {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   line-height: 1.6;
   color: var(--text);
   word-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 .chat-text ul {
@@ -814,13 +822,17 @@
 
 .chat-suggestions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   gap: 8px;
   margin-top: 10px;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
 }
 
 .chat-suggestion-chip {
   min-height: 36px;
+  flex: 0 0 auto;
   width: auto;
   padding: 8px 12px;
   border-radius: 999px;
@@ -862,7 +874,73 @@
 
 .chat-input-area {
   flex-shrink: 0;
-  padding-top: 8px;
+  position: sticky;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  z-index: 10;
+  padding-top: 14px;
+  padding-bottom: 6px;
+  background: linear-gradient(180deg, rgba(7, 8, 22, 0) 0%, rgba(7, 8, 22, 0.92) 26%, rgba(7, 8, 22, 0.98) 100%);
+}
+
+.ai-planner-page {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - var(--header-h));
+  height: calc(100vh - var(--header-h));
+  gap: 12px;
+  padding-bottom: 110px;
+}
+
+.ai-planner-topbar-right {
+  gap: 10px;
+}
+
+.ai-voice-toggle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.chat-composer-card {
+  margin: 0;
+  border-radius: 22px;
+  backdrop-filter: blur(10px);
+}
+
+.chat-composer-body {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 14px 14px 14px 16px;
+}
+
+.chat-composer-icon {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+}
+
+.chat-input-field {
+  min-height: 52px;
+  margin: 0;
+  padding: 0 16px;
+  font-size: 1rem;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.chat-input-field::placeholder {
+  color: var(--text-light);
+}
+
+.chat-send-btn {
+  min-height: 48px;
+  padding-inline: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 /* Typing Dots */
@@ -1019,12 +1097,43 @@
   .workout-week-grid { grid-template-columns: repeat(2, 1fr); }
   .diet-grid { grid-template-columns: 1fr; }
   .chat-bubble { max-width: 95%; }
+  .ai-voice-toggle { display: none; }
+  .ai-planner-page { padding-top: 8px; padding-bottom: 132px; }
+  .chat-bubble.chat-ai { max-width: 85%; }
+  .chat-bubble.chat-user { max-width: 82%; }
+  .chat-avatar,
+  .chat-avatar-user { width: 32px; height: 32px; font-size: 0.82rem; }
+  .chat-content { padding: 12px 14px; }
+  .chat-content-user { min-width: 128px; }
+  .chat-text { font-size: 0.94rem; line-height: 1.55; }
+  .chat-time,
+  .chat-provider { font-size: 0.68rem; }
+  .chat-input-area { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); padding-top: 12px; padding-bottom: 8px; }
+  .chat-composer-body { grid-template-columns: 48px minmax(0, 1fr) auto; gap: 8px; padding: 12px; }
+  .chat-send-btn { min-width: 88px; }
 }
 
 @media (max-width: 480px) {
   .card-grid-4 { grid-template-columns: 1fr; }
   .grid-4 { grid-template-columns: 1fr; }
   .workout-week-grid { grid-template-columns: 1fr; }
+  .ai-planner-page { padding-inline: 0; padding-bottom: 138px; }
+  .chat-container { gap: 14px; padding-top: 8px; padding-bottom: 28px; }
+  .chat-bubble { gap: 8px; }
+  .chat-bubble.chat-ai { max-width: 86%; }
+  .chat-bubble.chat-user { max-width: 84%; }
+  .chat-avatar,
+  .chat-avatar-user { width: 28px; height: 28px; font-size: 0.78rem; }
+  .chat-content { padding: 12px; }
+  .chat-content-user { min-width: 112px; }
+  .chat-suggestions { gap: 6px; margin-top: 8px; }
+  .chat-suggestion-chip { min-height: 34px; padding: 7px 10px; font-size: 0.76rem; }
+  .chat-input-area { bottom: calc(82px + env(safe-area-inset-bottom, 0px)); }
+  .chat-composer-card { border-radius: 20px; }
+  .chat-composer-body { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; padding: 10px; }
+  .chat-composer-icon { width: 44px; height: 44px; min-width: 44px; }
+  .chat-input-field { min-height: 48px; font-size: 0.96rem; padding-inline: 14px; }
+  .chat-send-btn { min-width: 78px; min-height: 44px; padding-inline: 14px; }
 }
 
 .scanner-hero-body {

@@ -48,8 +48,8 @@
         <button id="hamburger" class="hamburger" aria-label="Toggle menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
         <h2 class="topbar-title">🤖 AI Diet Planner</h2>
       </div>
-      <div class="topbar-right">
-        <label class="checkbox-wrap" style="font-size: 0.85rem; color: var(--text-muted);">
+      <div class="topbar-right ai-planner-topbar-right">
+        <label class="checkbox-wrap ai-voice-toggle">
           <input type="checkbox" id="voice-output-toggle">
           <span class="checkmark"></span>
           🔊 Voice Output
@@ -58,9 +58,9 @@
       </div>
     </header>
 
-    <main class="page-content" style="display: flex; flex-direction: column; height: calc(100vh - 72px);">
+    <main class="page-content ai-planner-page">
       <!-- Chat Messages -->
-      <div class="chat-container" id="chat-container" style="flex: 1; overflow-y: auto; padding-bottom: 16px;">
+      <div class="chat-container" id="chat-container">
         <!-- Welcome Message -->
         <div class="chat-bubble chat-ai animate-fade-in-up">
           <div class="chat-avatar">🤖</div>
@@ -85,13 +85,13 @@
 
       <!-- Input Area -->
       <div class="chat-input-area">
-        <div class="card" style="margin: 0;">
-          <div class="card-body" style="display: flex; gap: 12px; align-items: center; padding: 16px 20px;">
-            <button id="mic-btn" class="btn-icon" aria-label="Voice input" data-tooltip="Voice Input" style="flex-shrink: 0;">
+        <div class="card chat-composer-card">
+          <div class="card-body chat-composer-body">
+            <button id="mic-btn" class="btn-icon chat-composer-icon" aria-label="Voice input" data-tooltip="Voice Input">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
             </button>
-            <input type="text" id="chat-input" class="form-input" placeholder="Ask about diet plans, nutrition, or healthy meals..." style="flex: 1; margin: 0;">
-            <button id="send-btn" class="btn btn-primary btn-sm" style="flex-shrink: 0;">
+            <input type="text" id="chat-input" class="form-input chat-input-field" placeholder="Ask about diet plans, nutrition, or healthy meals...">
+            <button id="send-btn" class="btn btn-primary btn-sm chat-send-btn">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
               Send
             </button>
