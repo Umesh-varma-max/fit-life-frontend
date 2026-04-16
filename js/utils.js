@@ -88,13 +88,13 @@ function $$(selector) {
   return document.querySelectorAll(selector);
 }
 
-function setLoading(btnId, loading) {
+function setLoading(btnId, loading, loadingText = 'Loading...') {
   const btn = document.getElementById(btnId);
   if (!btn) return;
   if (loading) {
     btn.dataset.originalText = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner spinner-white"></span> Loading...';
+    btn.innerHTML = `<span class="spinner spinner-white"></span> ${loadingText}`;
   } else {
     btn.disabled = false;
     btn.innerHTML = btn.dataset.originalText || btn.innerHTML;

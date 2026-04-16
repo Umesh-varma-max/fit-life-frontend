@@ -167,10 +167,23 @@ function setupLoginForm() {
 function setupRegisterForm() {
   const form = document.getElementById('register-form');
   if (!form) return;
+  const registerButton = document.getElementById('register-btn');
+  const registerFields = ['reg-name', 'reg-email', 'reg-password', 'reg-confirm'];
+  let registerSubmitting = false;
+
+  registerFields.forEach((fieldId) => {
+    document.getElementById(fieldId)?.addEventListener('input', () => {
+      clearFieldError(fieldId);
+      clearRegisterError();
+    });
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (registerSubmitting) return;
+
     clearAllErrors(form);
+    clearRegisterError();
 
     const full_name = document.getElementById('reg-name').value.trim();
     const email = document.getElementById('reg-email').value.trim();
@@ -196,14 +209,26 @@ function setupRegisterForm() {
     }
     if (!valid) return;
 
-    setLoading('register-btn', true);
+    registerSubmitting = true;
+    registerButton?.blur();
+    setLoading('register-btn', true, 'Creating account...');
     try {
-      await authAPI.register({ full_name, email, password });
-      showToast('Account created! Please sign in.', 'success');
+      const response = await authAPI.register({ full_name, email, password });
+      clearAllErrors(form);
+      clearRegisterError();
+
+      if (response?.status === 'success') {
+        showToast('Account created successfully', 'success');
+      } else {
+        showToast('Account created successfully', 'success');
+      }
+
       setTimeout(() => {
         window.location.replace('index.html?login=1');
       }, 1000);
     } catch (err) {
+      const registerMessage = resolveRegisterErrorMessage(err);
+
       if (err.errors) {
         Object.entries(err.errors).forEach(([field, messages]) => {
           const fieldMap = { email: 'reg-email', password: 'reg-password', full_name: 'reg-name' };
@@ -212,14 +237,52 @@ function setupRegisterForm() {
           }
         });
       }
-      const errorMsg = document.getElementById('register-error-msg');
-      if (errorMsg) {
-        errorMsg.textContent = err.message || 'Registration failed';
-        errorMsg.classList.add('visible');
+
+      if (err?.status === 500) {
+        console.error('Registration backend response:', err.payload || err);
       }
-      showToast(err.message || 'Registration failed', 'error');
+
+      showRegisterError(registerMessage);
+      showToast(registerMessage, 'error');
     } finally {
+      registerSubmitting = false;
       setLoading('register-btn', false);
     }
   });
+}
+
+function resolveRegisterErrorMessage(err) {
+  if (err?.status === 400) {
+    return err.message || 'Registration could not be completed.';
+  }
+
+  if (err?.status === 429) {
+    return 'Too many attempts. Please wait a minute and try again.';
+  }
+
+  if (err?.status === 500) {
+    return 'Something went wrong while creating your account. Please try again.';
+  }
+
+  if (err?.status === 0) {
+    return 'Network error - check your connection';
+  }
+
+  return err?.message || 'Registration failed';
+}
+
+function showRegisterError(message) {
+  const errorMsg = document.getElementById('register-error-msg');
+  if (!errorMsg) return;
+
+  errorMsg.textContent = message || '';
+  errorMsg.classList.toggle('visible', Boolean(message));
+}
+
+function clearRegisterError() {
+  const errorMsg = document.getElementById('register-error-msg');
+  if (!errorMsg) return;
+
+  errorMsg.textContent = '';
+  errorMsg.classList.remove('visible');
 }
