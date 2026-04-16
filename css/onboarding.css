@@ -53,15 +53,17 @@
 .welcome-college-mark {
   position: absolute;
   inset: 50% auto auto 50%;
-  width: min(42vw, 280px);
+  width: min(44vw, 320px);
   aspect-ratio: 1 / 1;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: url('../assets/college-emblem.svg') center/contain no-repeat;
-  opacity: 0.14;
-  filter: grayscale(1) brightness(1.25);
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.05) 52%, transparent 74%),
+    url('../assets/college-emblem.svg') center/contain no-repeat;
+  opacity: 0.3;
+  filter: brightness(0) invert(1) drop-shadow(0 0 18px rgba(255, 255, 255, 0.18));
   pointer-events: none;
-  mix-blend-mode: screen;
+  z-index: 0;
 }
 
 .welcome-copy {
@@ -103,8 +105,8 @@
   }
 
   .welcome-college-mark {
-    width: min(52vw, 210px);
-    opacity: 0.11;
+    width: min(54vw, 230px);
+    opacity: 0.22;
     transform: translate(-50%, -54%);
   }
 
@@ -853,9 +855,9 @@
   }
 
   .welcome-college-mark {
-    width: min(26vw, 320px);
-    opacity: 0.12;
-    transform: translate(-18%, -48%);
+    width: min(28vw, 360px);
+    opacity: 0.24;
+    transform: translate(-20%, -46%);
   }
 
   .welcome-copy {
